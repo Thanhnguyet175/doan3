@@ -43,20 +43,21 @@ class OrderHistoryViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, errorMessage = "Chưa đăng nhập.") }
                 return@launch
             }
-            orderRepository.getOrderHistory(uid).fold(
-                onSuccess = { orders ->
+            try {
+                // 🟢 ĐÃ FIX: Chuyển sang dùng hàm lắng nghe Realtime cực xịn của Repository
+                orderRepository.observeCustomerOrders(uid).collect { orders ->
                     _uiState.update {
                         it.copy(
-                            isLoading      = false,
-                            allOrders      = orders,
+                            isLoading = false,
+                            allOrders = orders,
                             filteredOrders = applyStatusFilter(orders, it.selectedStatus)
                         )
                     }
-                },
-                onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
                 }
-            )
+            } catch (e: Exception) {
+                // Bắt lỗi nếu mạng rớt hoặc Firebase có vấn đề
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
+            }
         }
     }
 

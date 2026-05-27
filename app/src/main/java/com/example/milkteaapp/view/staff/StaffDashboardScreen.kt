@@ -305,9 +305,9 @@ private fun DialogChiTietDonStaff(don: Order, onDong: () -> Unit) {
                             fontSize = 12.sp,
                             color = Color.Gray
                         )
-                        if (item.toppings.isNotEmpty()) {
+                        if (item.selectedToppings.isNotEmpty()) { // 🟢 ĐÃ FIX: Đổi toppings thành selectedToppings
                             Text(
-                                "Topping: ${item.toppings.joinToString { it.name }}",
+                                text = "Topping: ${item.selectedToppings.joinToString { it.name }}", // 🟢 ĐÃ FIX: Tương tự ở đây
                                 fontSize = 12.sp,
                                 color = Color(0xFF795548)
                             )

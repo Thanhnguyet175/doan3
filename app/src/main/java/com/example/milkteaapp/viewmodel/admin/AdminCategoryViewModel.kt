@@ -89,8 +89,8 @@ class AdminCategoryViewModel @Inject constructor(
                     .whereEqualTo("categoryId", categoryId)
                     .get().await()
                 val list = snapshot.documents.mapNotNull { doc ->
-                    val data = doc.data ?: return@mapNotNull null
-                    Product.fromMap(data + mapOf("id" to doc.id))
+                    // 🟢 ĐÃ FIX: Dùng toObject của Firebase tự động ép kiểu cực nhàn thay vì gọi fromMap
+                    doc.toObject(Product::class.java)?.copy(id = doc.id)
                 }
                 _uiState.update {
                     it.copy(

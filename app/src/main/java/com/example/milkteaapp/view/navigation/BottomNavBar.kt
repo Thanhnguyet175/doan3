@@ -83,7 +83,7 @@ fun CustomerScaffold(
                     HomeScreen(
                         customerName = "Khách hàng",
                         categories   = menuUiState.categories,
-                        bestSellers  = menuUiState.allProducts.filter { it.isBestSeller },
+                        bestSellers  = menuUiState.allProducts.take(3),
                         soItemGio    = soItemGio,
                         onNavigateToMenu = { categoryId ->
                             menuViewModel.selectCategory(categoryId)

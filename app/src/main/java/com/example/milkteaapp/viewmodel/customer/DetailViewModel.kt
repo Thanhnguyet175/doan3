@@ -74,8 +74,8 @@ class DetailViewModel @Inject constructor(
                 val productDeferred = async { productRepository.getProductById(pId) }
                 val toppingDeferred = async { productRepository.getAllToppings() }
 
-                val product = productDeferred.await()
-                val allToppings = toppingDeferred.await()
+                val product = productDeferred.await().getOrNull()
+                val allToppings = toppingDeferred.await().getOrDefault(emptyList())
 
                 if (product != null) {
                     val allowedToppings = allToppings.filter { t ->

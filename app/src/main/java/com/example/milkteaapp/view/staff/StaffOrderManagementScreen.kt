@@ -535,8 +535,8 @@ private fun DialogStaffChiTietDon(
                             "${item.size.label} | Đường ${item.sugarLevel.label} | ${item.iceLevel.label}",
                             fontSize = 12.sp, color = MauTextSub
                         )
-                        if (item.toppings.isNotEmpty()) {
-                            Text("+ ${item.toppings.joinToString { it.name }}", fontSize = 12.sp, color = MauNauMid)
+                        if (item.selectedToppings.isNotEmpty()) { // 🟢 ĐÃ FIX: Đổi toppings thành selectedToppings
+                            Text(text = "+ ${item.selectedToppings.joinToString { it.name }}", fontSize = 12.sp, color = MauTextSub) // 🟢 ĐÃ FIX: Ở đây cũng vậy
                         }
                     }
                 }

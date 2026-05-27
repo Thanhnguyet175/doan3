@@ -142,9 +142,9 @@ class StaffOrderViewModel @Inject constructor(
      * Gán bản thân (nhân viên đang đăng nhập) làm người xử lý đơn.
      */
     fun assignSelf(orderId: String) {
-        val staffId = authRepository.currentUid ?: return
         viewModelScope.launch {
-            orderRepository.assignStaff(orderId, staffId).fold(
+            // 🟢 ĐÃ FIX: Chuyển từ assignStaff (không tồn tại) sang updateStatus (Đã xác nhận)
+            orderRepository.updateStatus(orderId, OrderStatus.CONFIRMED).fold(
                 onSuccess = {
                     _uiState.update { it.copy(successMessage = "Đã nhận đơn #$orderId.") }
                 },

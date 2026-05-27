@@ -128,14 +128,14 @@ fun AppNavGraph(
                     navController.navigate(Route.LOGIN) { popUpTo(0) { inclusive = true } }
                 },
                 productsScreenContent = { AdminProductScreen(onBack = { }) },
-                categoriesScreenContent = { AdminCategoryScreen(onBack = {}) },
+                categoriesScreenContent = { AdminCategoryScreen(onNavigateToEditCategory = { }) },
                 usersScreenContent = { AdminUserScreen(onBack = {}) },
                 statsScreenContent = { AdminStatsScreen(onBack = {}) }
             )
         }
 
         composable(Route.ADMIN_PRODUCT) { AdminProductScreen(onBack = { navController.popBackStack() }) }
-        composable(Route.ADMIN_CATEGORY) { AdminCategoryScreen (onBack = { navController.popBackStack() }) }
+        composable(Route.ADMIN_CATEGORY) { AdminCategoryScreen(onNavigateToEditCategory = { }) }
         composable(Route.ADMIN_USER) { AdminUserScreen(onBack = { navController.popBackStack() }) }
         composable(Route.ADMIN_STATS) { AdminStatsScreen(onBack = { navController.popBackStack() }) }
     }
