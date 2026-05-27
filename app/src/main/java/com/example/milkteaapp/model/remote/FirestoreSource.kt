@@ -12,14 +12,6 @@ import javax.inject.Singleton
 
 /**
  * Lớp nguồn dữ liệu Firestore – mọi truy vấn đọc/ghi đều đi qua đây.
- *
- * Cấu trúc collection trên Firestore:
- *   /users/{uid}
- *   /products/{productId}
- *   /categories/{categoryId}
- *   /toppings/{toppingId}
- *   /orders/{orderId}
- *   /promotions/{promotionId}
  */
 @Singleton
 class FirestoreSource @Inject constructor(
@@ -36,230 +28,130 @@ class FirestoreSource @Inject constructor(
     // ════════════════════════════════════════════════════════════════════════
     // USER
     // ════════════════════════════════════════════════════════════════════════
-
-    /** Lưu thông tin User sau khi đăng ký thành công */
-    suspend fun saveUser(user: User) {
-        usersCol.document(user.uid).set(user.toMap()).await()
-    }
-
-    /** Lấy thông tin User theo UID */
     suspend fun getUser(uid: String): User? {
         val snap = usersCol.document(uid).get().await()
         return if (snap.exists()) User.fromMap(snap.data ?: emptyMap()) else null
     }
 
-    /** Cập nhật một số field của User (partial update) */
-    suspend fun updateUser(uid: String, fields: Map<String, Any?>) {
-        usersCol.document(uid).update(fields).await()
-    }
-
-    /** Lấy tất cả user (Admin) */
-    suspend fun getAllUsers(): List<User> =
-        usersCol.get().await().documents
-            .mapNotNull { it.data?.let { d -> User.fromMap(d) } }
-
-    /** Khoá / mở khoá tài khoản user (Admin) */
-    suspend fun setUserActive(uid: String, isActive: Boolean) {
-        usersCol.document(uid).update("isActive", isActive).await()
+    suspend fun saveUser(user: User) {
+        usersCol.document(user.uid).set(user.toMap()).await()
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // CATEGORY
+    // PRODUCT & TOPPING
     // ════════════════════════════════════════════════════════════════════════
+    suspend fun getAllProducts(): List<Product> =
+        productsCol.get().await().documents
+            .mapNotNull { it.toObject(ProductDto::class.java)?.toDomain() }
 
-    /** Lấy danh sách danh mục, sắp xếp theo sortOrder */
-    suspend fun getCategories(): List<Category> =
-        categoriesCol.orderBy("sortOrder").get().await().documents
-            .mapNotNull { it.data?.let { d -> Category.fromMap(d) } }
-
-    /** Lưu / ghi đè một danh mục */
-    suspend fun saveCategory(category: Category) {
-        categoriesCol.document(category.id).set(category.toMap()).await()
-    }
-
-    /** Xoá danh mục theo ID */
-    suspend fun deleteCategory(categoryId: String) {
-        categoriesCol.document(categoryId).delete().await()
-    }
-
-    // ════════════════════════════════════════════════════════════════════════
-    // TOPPING
-    // ════════════════════════════════════════════════════════════════════════
-
-    /** Lấy tất cả topping */
-    suspend fun getToppings(): List<Topping> =
-        toppingsCol.get().await().documents
-            .mapNotNull { it.data?.let { d -> Topping.fromMap(d) } }
-
-    /** Lấy topping theo danh sách ID */
-    suspend fun getToppingsByIds(ids: List<String>): List<Topping> {
-        if (ids.isEmpty()) return emptyList()
-        // Firestore whereIn giới hạn 30 phần tử
-        return ids.chunked(30).flatMap { chunk ->
-            toppingsCol.whereIn("id", chunk).get().await().documents
-                .mapNotNull { it.data?.let { d -> Topping.fromMap(d) } }
-        }
-    }
-
-    /** Lưu / ghi đè một topping */
-    suspend fun saveTopping(topping: Topping) {
-        toppingsCol.document(topping.id).set(topping.toMap()).await()
-    }
-
-    /** Xoá topping */
-    suspend fun deleteTopping(toppingId: String) {
-        toppingsCol.document(toppingId).delete().await()
-    }
-
-    // ════════════════════════════════════════════════════════════════════════
-    // PRODUCT
-    // ════════════════════════════════════════════════════════════════════════
-
-    /** Lấy tất cả sản phẩm đang bán */
-    suspend fun getAvailableProducts(): List<Product> =
-        productsCol.whereEqualTo("isAvailable", true)
-            .get().await().documents
-            .mapNotNull { it.data?.let { d -> Product.fromMap(d) } }
-
-    /** Lấy sản phẩm theo danh mục */
-    suspend fun getProductsByCategory(categoryId: String): List<Product> =
-        productsCol.whereEqualTo("categoryId", categoryId)
-            .whereEqualTo("isAvailable", true)
-            .get().await().documents
-            .mapNotNull { it.data?.let { d -> Product.fromMap(d) } }
-
-    /** Lấy sản phẩm bán chạy nhất (top N) */
-    suspend fun getBestSellerProducts(limit: Long = 5): List<Product> =
-        productsCol.whereEqualTo("isBestSeller", true)
-            .orderBy("soldCount", Query.Direction.DESCENDING)
-            .limit(limit).get().await().documents
-            .mapNotNull { it.data?.let { d -> Product.fromMap(d) } }
-
-    /** Lấy sản phẩm nổi bật cho banner */
-    suspend fun getFeaturedProducts(): List<Product> =
-        productsCol.whereEqualTo("isFeatured", true)
-            .get().await().documents
-            .mapNotNull { it.data?.let { d -> Product.fromMap(d) } }
-
-    /** Lấy chi tiết một sản phẩm */
     suspend fun getProduct(productId: String): Product? {
         val snap = productsCol.document(productId).get().await()
-        return if (snap.exists()) Product.fromMap(snap.data ?: emptyMap()) else null
+        return snap.toObject(ProductDto::class.java)?.toDomain()
     }
 
-    /** Lưu / ghi đè sản phẩm (Admin) */
-    suspend fun saveProduct(product: Product) {
-        productsCol.document(product.id).set(product.toMap()).await()
-    }
+    suspend fun getAllCategories(): List<Category> =
+        categoriesCol.get().await().documents
+            .mapNotNull { snap ->
+                val name = snap.getString("name") ?: ""
+                val icon = snap.getString("iconName") ?: ""
+                Category(id = snap.id, name = name, iconName = icon)
+            }
 
-    /** Cập nhật một số field sản phẩm (Admin) */
-    suspend fun updateProduct(productId: String, fields: Map<String, Any?>) {
-        productsCol.document(productId).update(fields).await()
-    }
-
-    /** Xoá sản phẩm (Admin) */
-    suspend fun deleteProduct(productId: String) {
-        productsCol.document(productId).delete().await()
-    }
+    suspend fun getAllToppings(): List<Topping> =
+        toppingsCol.get().await().documents
+            .mapNotNull { snap ->
+                val name = snap.getString("name") ?: ""
+                val price = snap.getLong("price") ?: 0L
+                val avail = snap.getBoolean("isAvailable") ?: true
+                Topping(id = snap.id, name = name, price = price, isAvailable = avail)
+            }
 
     // ════════════════════════════════════════════════════════════════════════
-    // ORDER
+    // ORDER (GIỎ HÀNG & LỊCH SỬ ĐẶT HÀNG)
     // ════════════════════════════════════════════════════════════════════════
 
-    /** Tạo đơn hàng mới */
-    suspend fun createOrder(order: Order) {
-        ordersCol.document(order.id).set(order.toMap()).await()
-    }
-
-    /** Cập nhật trạng thái đơn hàng (Staff / Admin) */
-    suspend fun updateOrderStatus(orderId: String, status: OrderStatus) {
-        ordersCol.document(orderId).update(
-            mapOf(
-                "status"    to status.name,
-                "updatedAt" to com.google.firebase.Timestamp.now()
-            )
-        ).await()
-    }
-
-    /** Cập nhật nhiều field đơn hàng */
-    suspend fun updateOrder(orderId: String, fields: Map<String, Any?>) {
-        ordersCol.document(orderId).update(fields).await()
-    }
-
-    /** Lấy lịch sử đơn của khách */
-    suspend fun getOrdersByCustomer(customerId: String): List<Order> =
-        ordersCol.whereEqualTo("customerId", customerId)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .get().await().documents
-            .mapNotNull { it.data?.let { d -> Order.fromMap(d) } }
-
-    /** Lấy tất cả đơn hàng (Admin) */
-    suspend fun getAllOrders(): List<Order> =
-        ordersCol.orderBy("createdAt", Query.Direction.DESCENDING)
-            .get().await().documents
-            .mapNotNull { it.data?.let { d -> Order.fromMap(d) } }
-
-    /** Lấy đơn hàng đang xử lý realtime – Staff Dashboard dùng Flow */
-    fun getActiveOrdersFlow(): Flow<List<Order>> = callbackFlow {
-        val activeStatuses = listOf(
-            OrderStatus.PENDING.name,
-            OrderStatus.CONFIRMED.name,
-            OrderStatus.BREWING.name,
-            OrderStatus.DELAYED.name
+    /** Lưu đơn hàng mới lên Firestore */
+    suspend fun saveOrder(order: Order) {
+        val mapData = mutableMapOf<String, Any?>(
+            "customerId"      to order.customerId,
+            "customerName"    to order.customerName,
+            "customerPhone"   to order.customerPhone,
+            "totalAmount"     to order.totalAmount,
+            "discountAmount"  to order.discountAmount,
+            "promotionId"     to order.promotionId,
+            "status"          to order.status.name,
+            "paymentMethod"   to order.paymentMethod,
+            "deliveryAddress" to order.deliveryAddress,
+            "note"            to order.note,
+            "createdAt"       to order.createdAt,
+            "updatedAt"       to order.updatedAt
         )
+
+        val itemsList = order.items.map { item ->
+            mapOf(
+                "productId"       to item.productId,
+                "productName"     to item.productName,
+                "productImageUrl" to item.productImageUrl,
+                "size"            to item.size.name,
+                "sugarLevel"      to item.sugarLevel.name,
+                "iceLevel"        to item.iceLevel.name,
+                "unitPrice"       to item.unitPrice,
+                "quantity"        to item.quantity,
+                "note"            to item.note,
+                "selectedToppings" to item.selectedToppings.map { t ->
+                    mapOf("id" to t.id, "name" to t.name, "price" to t.price, "isAvailable" to t.isAvailable)
+                }
+            )
+        }
+        mapData["items"] = itemsList
+
+        ordersCol.document(order.id).set(mapData).await()
+    }
+
+    /** Lắng nghe danh sách đơn hàng của 1 khách hàng theo thời gian thực (Realtime Flow) */
+    fun observeCustomerOrders(customerId: String): Flow<List<Order>> = callbackFlow {
         val listener = ordersCol
-            .whereIn("status", activeStatuses)
-            .orderBy("createdAt", Query.Direction.ASCENDING)
+            .whereEqualTo("customerId", customerId)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
                     return@addSnapshotListener
                 }
-                val orders = snapshot?.documents
-                    ?.mapNotNull { it.data?.let { d -> Order.fromMap(d) } }
-                    ?: emptyList()
+                val orders = snapshot?.documents?.mapNotNull { doc ->
+                    doc.data?.let { d -> Order.fromMap(doc.id, d) } // 🟢 ĐÃ FIX: Truyền thêm doc.id vào tham số thứ nhất
+                } ?: emptyList()
                 trySend(orders)
             }
         awaitClose { listener.remove() }
     }
 
-    /** Lấy đơn hàng theo trạng thái cụ thể */
-    suspend fun getOrdersByStatus(status: OrderStatus): List<Order> =
-        ordersCol.whereEqualTo("status", status.name)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
+    /** Lấy toàn bộ danh sách đơn hàng hệ thống (Dành cho màn hình quản lý của Admin) */
+    suspend fun getAllOrders(): List<Order> =
+        ordersCol.orderBy("createdAt", Query.Direction.DESCENDING)
             .get().await().documents
-            .mapNotNull { it.data?.let { d -> Order.fromMap(d) } }
+            .mapNotNull { it.data?.let { d -> Order.fromMap(it.id, d) } } // 🟢 ĐÃ FIX: Truyền thêm it.id vào tham số thứ nhất
 
     // ════════════════════════════════════════════════════════════════════════
     // PROMOTION
     // ════════════════════════════════════════════════════════════════════════
-
-    /** Lấy các khuyến mãi đang hoạt động */
     suspend fun getActivePromotions(): List<Promotion> =
         promotionsCol.whereEqualTo("isActive", true)
             .get().await().documents
             .mapNotNull { it.data?.let { d -> Promotion.fromMap(d) } }
 
-    /** Lấy chi tiết một khuyến mãi */
     suspend fun getPromotion(promotionId: String): Promotion? {
         val snap = promotionsCol.document(promotionId).get().await()
         return if (snap.exists()) Promotion.fromMap(snap.data ?: emptyMap()) else null
     }
 
-    /** Lưu / ghi đè khuyến mãi (Admin) */
     suspend fun savePromotion(promotion: Promotion) {
         promotionsCol.document(promotion.id).set(promotion.toMap()).await()
     }
 
-    /** Tăng số lần dùng khuyến mãi sau khi đặt hàng thành công */
     suspend fun incrementPromotionUsage(promotionId: String) {
         promotionsCol.document(promotionId)
             .update("currentUsage", com.google.firebase.firestore.FieldValue.increment(1))
             .await()
-    }
-
-    /** Xoá khuyến mãi (Admin) */
-    suspend fun deletePromotion(promotionId: String) {
-        promotionsCol.document(promotionId).delete().await()
     }
 }

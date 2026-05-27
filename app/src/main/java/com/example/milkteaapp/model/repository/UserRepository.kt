@@ -5,8 +5,11 @@ import com.example.milkteaapp.model.data.UserRole
 import com.example.milkteaapp.model.remote.FirestoreSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Repository quản lý người dùng – chủ yếu dùng bởi Admin.
@@ -27,25 +30,41 @@ class UserRepository @Inject constructor(
             }
         }
 
-    /** Lấy danh sách toàn bộ người dùng (Admin) */
+    /** Lấy danh sách toàn bộ người dùng (Admin) - Lấy từ Firestore collection "users" */
     suspend fun getAllUsers(): Result<List<User>> =
         withContext(Dispatchers.IO) {
-            runCatching { firestoreSource.getAllUsers() }
+            runCatching {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                suspendCancellableCoroutine { continuation ->
+                    db.collection("users").get()
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                val users = task.result?.documents?.mapNotNull { doc ->
+                                    User.fromMap(doc.data ?: emptyMap())
+                                } ?: emptyList()
+                                continuation.resume(users)
+                            } else {
+                                continuation.resumeWithException(task.exception ?: Exception("Get all users failed"))
+                            }
+                        }
+                }
+            }
         }
 
     /** Lấy danh sách người dùng theo role (Admin) */
     suspend fun getUsersByRole(role: UserRole): Result<List<User>> =
         withContext(Dispatchers.IO) {
             runCatching {
-                firestoreSource.getAllUsers().filter { it.role == role }
+                val allUsersResult = getAllUsers().getOrThrow()
+                allUsersResult.filter { it.role == role }
             }
         }
 
-    // ── Cập nhật ─────────────────────────────────────────────────────────────
+    // ── Sửa ──────────────────────────────────────────────────────────────────
 
     /**
-     * Cập nhật thông tin cá nhân của người dùng.
-     * Chỉ cho phép sửa các field an toàn – role và uid không được thay đổi ở đây.
+     * Cập nhật thông tin profile (họ tên, sđt, địa chỉ...) của người dùng.
+     * FIX: buildMap<String, Any> thay vì <String, Any?> để tránh crash Firestore
      */
     suspend fun updateProfile(
         uid: String,
@@ -55,14 +74,25 @@ class UserRepository @Inject constructor(
         avatarUrl: String? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            val fields = buildMap<String, Any?> {
+            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            val fields = buildMap<String, Any> {
                 fullName?.let    { put("fullName", it) }
                 phoneNumber?.let { put("phoneNumber", it) }
                 address?.let     { put("address", it) }
                 avatarUrl?.let   { put("avatarUrl", it) }
             }
             if (fields.isEmpty()) return@runCatching
-            firestoreSource.updateUser(uid, fields)
+
+            suspendCancellableCoroutine { continuation ->
+                db.collection("users").document(uid).update(fields)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            continuation.resume(Unit)
+                        } else {
+                            continuation.resumeWithException(task.exception ?: Exception("Update profile failed"))
+                        }
+                    }
+            }
         }
     }
 
@@ -75,14 +105,36 @@ class UserRepository @Inject constructor(
     suspend fun changeUserRole(uid: String, newRole: UserRole): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
-                firestoreSource.updateUser(uid, mapOf("role" to newRole.name))
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                suspendCancellableCoroutine { continuation ->
+                    db.collection("users").document(uid).update("role", newRole.name)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                continuation.resume(Unit)
+                            } else {
+                                continuation.resumeWithException(task.exception ?: Exception("Change role failed"))
+                            }
+                        }
+                }
             }
         }
 
-
+    /** Khóa tài khoản người dùng */
     suspend fun lockUser(uid: String): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching { firestoreSource.setUserActive(uid, false) }
+            runCatching {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                suspendCancellableCoroutine { continuation ->
+                    db.collection("users").document(uid).update("isActive", false)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                continuation.resume(Unit)
+                            } else {
+                                continuation.resumeWithException(task.exception ?: Exception("Lock user failed"))
+                            }
+                        }
+                }
+            }
         }
 
     /**
@@ -90,6 +142,18 @@ class UserRepository @Inject constructor(
      */
     suspend fun unlockUser(uid: String): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching { firestoreSource.setUserActive(uid, true) }
+            runCatching {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                suspendCancellableCoroutine { continuation ->
+                    db.collection("users").document(uid).update("isActive", true)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                continuation.resume(Unit)
+                            } else {
+                                continuation.resumeWithException(task.exception ?: Exception("Unlock user failed"))
+                            }
+                        }
+                }
+            }
         }
 }

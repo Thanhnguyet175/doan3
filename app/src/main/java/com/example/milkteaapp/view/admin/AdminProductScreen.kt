@@ -42,7 +42,6 @@ import coil.request.ImageRequest
 import com.example.milkteaapp.model.data.Product
 import com.example.milkteaapp.viewmodel.admin.AdminProductViewModel
 
-// Giả định bạn có một Model Category như thế này, nếu sai package hãy sửa lại import
 import com.example.milkteaapp.model.data.Category
 
 // ── Bảng màu (đồng bộ thiết kế) ──────────────────────────────────────────────
@@ -76,37 +75,7 @@ fun AdminProductScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Cream,
-        topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Cream)
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Text("☰", fontSize = 22.sp, color = BrownDark)
-                }
-                Text(
-                    "Trà Sữa NL Admin",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = BrownDark,
-                    modifier = Modifier.weight(1f)
-                )
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Brown),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("A", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
+        containerColor = Cream
     ) { padding ->
         Column(
             modifier = Modifier
@@ -114,7 +83,8 @@ fun AdminProductScreen(
                 .background(Cream)
                 .padding(padding)
         ) {
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
+            // Đẩy Tea Collection lên sát trên, tăng nhẹ padding top để không bị quá dính
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                 Text(
                     "Tea Collection",
                     fontSize = 26.sp,

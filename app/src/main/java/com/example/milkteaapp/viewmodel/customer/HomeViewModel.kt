@@ -48,6 +48,7 @@ class HomeViewModel @Inject constructor(
             val categoriesDeferred    = async { productRepository.getCategories() }
             val featuredDeferred      = async { productRepository.getFeaturedProducts() }
             val userDeferred          = async { authRepository.getCurrentUser() }
+            // CHỈ LẤY ĐƠN HÀNG HOÀN THÀNH (COMPLETED) ĐỂ TÍNH DOANH THU & SẢN PHẨM BÁN CHẠY
             val completedOrdersDeferred = async { orderRepository.getOrdersByStatus(OrderStatus.COMPLETED) }
 
             val categories    = categoriesDeferred.await().getOrDefault(emptyList())
@@ -55,11 +56,10 @@ class HomeViewModel @Inject constructor(
             val customerName  = userDeferred.await().getOrNull()?.fullName ?: ""
             val completedOrders = completedOrdersDeferred.await().getOrDefault(emptyList())
 
-            // 2. LOGIC LỌC ĐỘNG: Đếm số lượng sản phẩm từ các đơn hàng thành công
+            // 2. LOGIC LỌC ĐỘNG: Duyệt qua các đơn hàng hoàn thành để cộng dồn số lượng bán ra
             val productSalesMap = mutableMapOf<String, Int>()
 
             for (order in completedOrders) {
-                // Sử dụng toán tử điều hướng an toàn tránh crash nếu items rỗng
                 order.items?.forEach { item ->
                     val pId = item.productId
                     val qty = item.quantity
@@ -70,28 +70,28 @@ class HomeViewModel @Inject constructor(
                 }
             }
 
-            // Lấy danh sách ID của 3 sản phẩm có tổng lượt mua cao nhất từ các đơn hàng đã hoàn thành
-            val top3ProductIds = productSalesMap.entries
+            // Lấy danh sách ID của 5 sản phẩm có tổng lượt mua cao nhất từ các đơn hàng thành công
+            val top5ProductIds = productSalesMap.entries
                 .sortedByDescending { it.value }
-                .take(3)
+                .take(5)
                 .map { it.key }
 
-            // 🟢 ĐÃ FIX: Sử dụng danh sách featured (hoặc danh sách sản phẩm tổng của hệ thống) để map thông tin chi tiết chi tiết
+            // Đối chiếu ID lấy thông tin chi tiết sản phẩm và sắp xếp theo số lượng bán từ cao đến thấp
             val dynamicBestSellers = featured.filter { product ->
-                product.id in top3ProductIds
+                product.id in top5ProductIds
             }.distinctBy { product ->
                 product.id
             }.sortedByDescending { product ->
                 productSalesMap[product.id] ?: 0
             }
 
-            // 3. Cập nhật dữ liệu sạch vào UI State
+            // 3. Đổ dữ liệu sạch vào UI State để Composable cập nhật màn hình công khai
             _uiState.update {
                 it.copy(
                     isLoading        = false,
                     customerName     = customerName,
                     categories       = categories,
-                    bestSellers      = dynamicBestSellers, // Đổ đúng 3 món mua nhiều nhất vào đây
+                    bestSellers      = dynamicBestSellers, // Trả danh sách thực tế đã sắp xếp ra view
                     featuredProducts = featured
                 )
             }

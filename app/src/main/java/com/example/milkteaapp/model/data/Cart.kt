@@ -24,17 +24,17 @@ data class CartItem(
     val productName: String = "",
     val productImageUrl: String? = null,
     val size: DrinkSize = DrinkSize.MEDIUM,
-    val sugarLevel: SugarLevel = SugarLevel.FULL,
+    val sugarLevel: SugarLevel = SugarLevel.ONE_HUNDRED,
     val iceLevel: IceLevel = IceLevel.NORMAL,
     val selectedToppings: List<Topping> = emptyList(),
     val unitPrice: Long = 0L,
     val quantity: Int = 1,
-    val note: String = ""
+    val note: String = "",
+    val price: Long = 0L,
+    val imageUrl: String? = null
 ) {
-    /** Tổng tiền của dòng này = đơn giá × số lượng */
     val subtotal: Long get() = unitPrice * quantity
 
-    /** Mô tả ngắn gọn các tuỳ chọn để hiển thị dưới tên sản phẩm */
     val optionSummary: String
         get() = buildString {
             append(size.label)
@@ -45,10 +45,6 @@ data class CartItem(
             }
         }
 
-    /**
-     * Tạo bản sao với số lượng mới.
-     * Dùng trong CartViewModel khi user nhấn +/-.
-     */
     fun withQuantity(newQty: Int): CartItem = copy(quantity = newQty.coerceAtLeast(1))
 }
 
@@ -56,8 +52,6 @@ data class CartItem(
 // Extension helpers
 // ─────────────────────────────────────────────────────────
 
-/** Tổng tiền của toàn bộ giỏ hàng */
 fun List<CartItem>.totalAmount(): Long = sumOf { it.subtotal }
 
-/** Tổng số lượng món trong giỏ (dùng cho badge icon) */
 fun List<CartItem>.totalQuantity(): Int = sumOf { it.quantity }

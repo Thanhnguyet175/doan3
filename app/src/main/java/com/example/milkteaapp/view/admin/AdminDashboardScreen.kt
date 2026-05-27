@@ -21,7 +21,7 @@ private val MauNauDam  = Color(0xFF3E2723)
 private val MauNau     = Color(0xFF4E342E)
 private val MauNauMid  = Color(0xFF795548)
 private val MauNauNhat = Color(0xFFF5F0EB)
-private val MauNauKem  = Color(0xFFD7CCC8)
+val MauNauKem  = Color(0xFFD7CCC8)
 private val MauDo      = Color(0xFFEF4444)
 private val CardWhite  = Color(0xFFFFFFFF)
 

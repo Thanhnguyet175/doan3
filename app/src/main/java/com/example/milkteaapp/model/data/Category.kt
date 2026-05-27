@@ -15,7 +15,8 @@ data class Category(
     val name: String = "",
     val iconUrl: String? = null,
     val sortOrder: Int = 0,
-    val isVisible: Boolean = true
+    val isVisible: Boolean = true,
+    val iconName: String = ""
 ) {
     fun toMap(): Map<String, Any?> = mapOf(
         "id"        to id,

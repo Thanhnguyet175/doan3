@@ -20,87 +20,101 @@ data class DetailUiState(
     val product: Product? = null,
     val availableToppings: List<Topping> = emptyList(),
 
-    // Các lựa chọn hiện tại của user
     val selectedSize: DrinkSize = DrinkSize.MEDIUM,
-    val selectedSugar: SugarLevel = SugarLevel.FULL,
-    val selectedIce: IceLevel = IceLevel.NORMAL,
+    val selectedSugar: SugarLevel = SugarLevel.ONE_HUNDRED,
+
+    // Quản lý 2 trạng thái đá riêng biệt tại tầng Logic
+    val selectedIcePack: IcePackOption = IcePackOption.DA_CHUNG,
+    val selectedIceLevel: IceLevel = IceLevel.NORMAL,
+
     val selectedToppings: List<Topping> = emptyList(),
     val quantity: Int = 1,
     val note: String = "",
 
-    val addedToCart: Boolean = false,   // trigger snackbar "Đã thêm vào giỏ"
+    val addedToCart: Boolean = false,
     val errorMessage: String? = null
 ) {
-    /** Giá hiển thị = giá theo size + tổng topping */
     val currentUnitPrice: Long
         get() {
-            val sizePrice = product?.priceForSize(selectedSize) ?: 0L
-            val toppingPrice = selectedToppings.sumOf { it.price }
-            return sizePrice + toppingPrice
+            val prod = product ?: return 0L
+            val priceForSize = prod.sizePrices[selectedSize] ?: prod.basePrice
+            val toppingSum = selectedToppings.sumOf { it.price }
+            return priceForSize + toppingSum
         }
 
-    val totalPrice: Long get() = currentUnitPrice * quantity
+    val totalPrice: Long
+        get() = currentUnitPrice * quantity
 }
 
 @HiltViewModel
 class DetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val productRepository: ProductRepository
+    private val productRepository: ProductRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-
-    // productId được truyền qua Navigation argument
-    private val productId: String = checkNotNull(savedStateHandle["productId"])
 
     private val _uiState = MutableStateFlow(DetailUiState())
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
 
-    init { loadProduct() }
+    private val productId: String? = savedStateHandle["productId"]
 
-    fun loadProduct() {
+    init {
+        loadProductDetail()
+    }
+
+    private fun loadProductDetail() {
+        val pId = productId
+        if (pId.isNullOrBlank()) {
+            _uiState.update { it.copy(errorMessage = "Không tìm thấy mã sản phẩm.") }
+            return
+        }
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val productDeferred = async { productRepository.getProductById(pId) }
+                val toppingDeferred = async { productRepository.getAllToppings() }
 
-            val productResult = productRepository.getProductById(productId)
-            productResult.fold(
-                onSuccess = { product ->
-                    // Tải topping song song
-                    val toppings = productRepository
-                        .getToppingsByIds(product.availableToppings)
-                        .getOrDefault(emptyList())
+                val product = productDeferred.await()
+                val allToppings = toppingDeferred.await()
 
-                    _uiState.update {
-                        it.copy(
+                if (product != null) {
+                    val allowedToppings = allToppings.filter { t ->
+                        t.isAvailable && product.toppingIds.contains(t.id)
+                    }
+
+                    _uiState.update { state ->
+                        state.copy(
                             isLoading         = false,
                             product           = product,
-                            availableToppings = toppings,
-                            // Default options theo sản phẩm
-                            selectedSize      = if (DrinkSize.MEDIUM in product.sizePrices.keys)
-                                DrinkSize.MEDIUM else
-                                product.sizePrices.keys.firstOrNull() ?: DrinkSize.MEDIUM,
-                            selectedSugar     = product.sugarOptions.lastOrNull() ?: SugarLevel.FULL,
-                            selectedIce       = product.iceOptions.getOrElse(1) { IceLevel.NORMAL }
+                            availableToppings = allowedToppings,
+                            selectedSize      = product.availableSizes.firstOrNull() ?: DrinkSize.MEDIUM,
+                            selectedSugar     = product.sugarOptions.firstOrNull() ?: SugarLevel.ONE_HUNDRED,
+                            selectedIcePack   = IcePackOption.DA_CHUNG,
+                            selectedIceLevel  = product.iceOptions.firstOrNull() ?: IceLevel.NORMAL
                         )
                     }
-                },
-                onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "Sản phẩm không tồn tại.") }
                 }
-            )
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.localizedMessage ?: "Lỗi tải dữ liệu.") }
+            }
         }
     }
 
-    // ── Các lựa chọn ─────────────────────────────────────────────────────────
-
-    fun selectSize(size: DrinkSize)     = _uiState.update { it.copy(selectedSize = size) }
-    fun selectSugar(sugar: SugarLevel)  = _uiState.update { it.copy(selectedSugar = sugar) }
-    fun selectIce(ice: IceLevel)        = _uiState.update { it.copy(selectedIce = ice) }
-    fun onNoteChange(note: String)      = _uiState.update { it.copy(note = note) }
+    fun selectSize(size: DrinkSize) = _uiState.update { it.copy(selectedSize = size) }
+    fun selectSugar(sugar: SugarLevel) = _uiState.update { it.copy(selectedSugar = sugar) }
+    fun selectIcePack(option: IcePackOption) = _uiState.update { it.copy(selectedIcePack = option) }
+    fun selectIceLevel(level: IceLevel) = _uiState.update { it.copy(selectedIceLevel = level) }
 
     fun toggleTopping(topping: Topping) {
         _uiState.update { state ->
             val current = state.selectedToppings.toMutableList()
-            if (current.any { it.id == topping.id }) current.removeAll { it.id == topping.id }
-            else current.add(topping)
+            if (current.any { it.id == topping.id }) {
+                current.removeAll { it.id == topping.id }
+            } else {
+                current.add(topping)
+            }
             state.copy(selectedToppings = current)
         }
     }
@@ -108,15 +122,16 @@ class DetailViewModel @Inject constructor(
     fun increaseQty() = _uiState.update { it.copy(quantity = it.quantity + 1) }
     fun decreaseQty() = _uiState.update { it.copy(quantity = (it.quantity - 1).coerceAtLeast(1)) }
 
-    // ── Thêm vào giỏ ─────────────────────────────────────────────────────────
-
-    /**
-     * Tạo [CartItem] từ lựa chọn hiện tại và trả về để CartViewModel xử lý.
-     * Đồng thời emit [DetailUiState.addedToCart] = true để hiển thị snackbar.
-     */
     fun buildCartItem(): CartItem? {
         val state = _uiState.value
         val product = state.product ?: return null
+
+        val thongTinDaGop = if (state.selectedIcePack == IcePackOption.DA_RIENG) {
+            IcePackOption.DA_RIENG.label
+        } else {
+            "${IcePackOption.DA_CHUNG.label} (${state.selectedIceLevel.label})"
+        }
+
         return CartItem(
             cartItemId        = UUID.randomUUID().toString(),
             productId         = product.id,
@@ -124,15 +139,15 @@ class DetailViewModel @Inject constructor(
             productImageUrl   = product.imageUrl,
             size              = state.selectedSize,
             sugarLevel        = state.selectedSugar,
-            iceLevel          = state.selectedIce,
+            iceLevel          = state.selectedIceLevel,
             selectedToppings  = state.selectedToppings,
             unitPrice         = state.currentUnitPrice,
             quantity          = state.quantity,
-            note              = state.note
+            note              = if (state.note.isBlank()) "Đá: $thongTinDaGop" else "Đá: $thongTinDaGop | ${state.note}"
         )
     }
 
     fun onAddedToCart() = _uiState.update { it.copy(addedToCart = true) }
     fun onAddedToCartHandled() = _uiState.update { it.copy(addedToCart = false) }
-    fun clearError() = _uiState.update { it.copy(errorMessage = null) }
+    fun onNoteChange(newNote: String) = _uiState.update { it.copy(note = newNote) }
 }

@@ -69,6 +69,8 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.7")
 
+    implementation("androidx.compose.material:material-icons-extended:1.6.0") // (phiên bản có thể thay đổi tùy project của bạn)
+
     // Firebase (Đã sửa: Sử dụng text trực tiếp không thông qua toml để tránh lỗi ép version 22.0.1)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)

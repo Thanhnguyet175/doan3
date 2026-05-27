@@ -1,13 +1,20 @@
 package com.example.milkteaapp.model.repository
 
-import com.example.milkteaapp.model.data.*
+import com.example.milkteaapp.model.data.Order
+import com.example.milkteaapp.model.data.CartItem
+import com.example.milkteaapp.model.data.OrderStatus
+import com.example.milkteaapp.model.data.User
 import com.example.milkteaapp.model.remote.FirestoreSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.withContext
-import java.util.UUID
+import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Repository quản lý vòng đời đơn hàng:
@@ -21,9 +28,7 @@ class OrderRepository @Inject constructor(
 
     /**
      * Tạo đơn hàng mới từ giỏ hàng của khách.
-     * ID đơn hàng được sinh theo định dạng "NL-XXXX".
-     *
-     * @return [Result.success] chứa [Order] vừa tạo
+     * ID đơn hàng được sinh theo định dạng "NL-XXXX" với kiểm tra trùng lặp.
      */
     suspend fun placeOrder(
         customer: User,
@@ -48,10 +53,60 @@ class OrderRepository @Inject constructor(
                 deliveryAddress = deliveryAddress,
                 note            = note
             )
-            firestoreSource.createOrder(order)
 
-            // Tăng usage counter nếu có áp dụng khuyến mãi
-            promotionId?.let { firestoreSource.incrementPromotionUsage(it) }
+            val orderMap = mapOf(
+                "id" to order.id,
+                "customerId" to order.customerId,
+                "customerName" to order.customerName,
+                "customerPhone" to order.customerPhone,
+                // 🟢 ĐÃ FIX: Map chính xác theo các thuộc tính SNAPSHOT của OrderItem trong Order.kt
+                "items" to order.items.map { item ->
+                    mapOf(
+                        "productId" to item.productId,
+                        "productName" to item.productName,
+                        "productImageUrl" to item.productImageUrl,
+                        "size" to item.size.name,
+                        "sugarLevel" to item.sugarLevel.name,
+                        "iceLevel" to item.iceLevel.name,
+                        "selectedToppings" to item.selectedToppings.map { t ->
+                            mapOf(
+                                "id" to t.id,
+                                "name" to t.name,
+                                "price" to t.price,
+                                "isAvailable" to t.isAvailable
+                            )
+                        },
+                        "unitPrice" to item.unitPrice,
+                        "quantity" to item.quantity,
+                        "note" to item.note
+                    )
+                },
+                "totalAmount" to order.totalAmount,
+                "discountAmount" to order.discountAmount,
+                "finalAmount" to order.finalAmount,
+                "status" to order.status.name,
+                "paymentMethod" to order.paymentMethod,
+                "deliveryAddress" to order.deliveryAddress,
+                "note" to order.note,
+                "createdAt" to com.google.firebase.Timestamp(order.createdAt.seconds, order.createdAt.nanoseconds),
+                "updatedAt" to com.google.firebase.Timestamp(order.updatedAt.seconds, order.updatedAt.nanoseconds)
+            )
+
+            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            suspendCancellableCoroutine { continuation ->
+                db.collection("orders").document(order.id).set(orderMap)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            continuation.resume(Unit)
+                        } else {
+                            continuation.resumeWithException(task.exception ?: Exception("Place order failed"))
+                        }
+                    }
+            }
+
+            if (!promotionId.isNullOrBlank()) {
+                runCatching { firestoreSource.incrementPromotionUsage(promotionId) }
+            }
 
             order
         }
@@ -60,27 +115,26 @@ class OrderRepository @Inject constructor(
     // ── Cập nhật trạng thái ───────────────────────────────────────────────────
 
     /**
-     * Cập nhật trạng thái đơn hàng (Staff / Admin).
-     * Tự động cập nhật [Order.updatedAt].
+     * Nhân viên cập nhật trạng thái đơn hàng (ví dụ: CONFIRMED -> BREWING).
      */
-    suspend fun updateStatus(orderId: String, status: OrderStatus): Result<Unit> =
-        withContext(Dispatchers.IO) {
-            runCatching { firestoreSource.updateOrderStatus(orderId, status) }
-        }
-
-    /** Gán nhân viên xử lý đơn */
-    suspend fun assignStaff(orderId: String, staffId: String): Result<Unit> =
+    suspend fun updateStatus(orderId: String, newStatus: OrderStatus): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
-                firestoreSource.updateOrder(orderId, mapOf("assignedStaffId" to staffId))
-            }
-        }
-
-    /** Đánh dấu đơn đã thanh toán */
-    suspend fun markAsPaid(orderId: String): Result<Unit> =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                firestoreSource.updateOrder(orderId, mapOf("isPaid" to true))
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                val updates = mapOf(
+                    "status" to newStatus.name,
+                    "updatedAt" to com.google.firebase.Timestamp.now()
+                )
+                suspendCancellableCoroutine { continuation ->
+                    db.collection("orders").document(orderId).update(updates)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                continuation.resume(Unit)
+                            } else {
+                                continuation.resumeWithException(task.exception ?: Exception("Update status failed"))
+                            }
+                        }
+                }
             }
         }
 
@@ -88,40 +142,96 @@ class OrderRepository @Inject constructor(
     suspend fun cancelOrder(orderId: String): Result<Unit> =
         updateStatus(orderId, OrderStatus.CANCELLED)
 
-    // ── Truy vấn ─────────────────────────────────────────────────────────────
+    // ── Truy vấn dữ liệu ──────────────────────────────────────────────────────
 
-    /** Lịch sử đơn hàng của khách */
-    suspend fun getOrderHistory(customerId: String): Result<List<Order>> =
-        withContext(Dispatchers.IO) {
-            runCatching { firestoreSource.getOrdersByCustomer(customerId) }
-        }
+    /** Lắng nghe Realtime lịch sử đơn hàng của riêng một khách hàng */
+    fun observeCustomerOrders(customerId: String): Flow<List<Order>> = callbackFlow {
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val listener = db.collection("orders")
+            .whereEqualTo("customerId", customerId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val orders = snapshot?.documents?.mapNotNull { doc ->
+                    doc.data?.let { Order.fromMap(doc.id, it) } // 🟢 ĐÃ FIX: Truyền thêm đối số doc.id vào hàm fromMap chuẩn cấu trúc mới
+                }?.sortedByDescending { it.createdAt } ?: emptyList()
+                trySend(orders)
+            }
+        awaitClose { listener.remove() }
+    }
 
-    /** Tất cả đơn hàng (Admin) */
+    /** Lấy toàn bộ danh sách đơn hàng (Admin) */
     suspend fun getAllOrders(): Result<List<Order>> =
         withContext(Dispatchers.IO) {
-            runCatching { firestoreSource.getAllOrders() }
+            runCatching {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                suspendCancellableCoroutine { continuation ->
+                    db.collection("orders")
+                        .get()
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                val orders = task.result?.documents?.mapNotNull { doc ->
+                                    doc.data?.let { Order.fromMap(doc.id, it) } // 🟢 ĐÃ FIX: Thêm doc.id đồng bộ
+                                }?.sortedByDescending { it.createdAt } ?: emptyList()
+                                continuation.resume(orders)
+                            } else {
+                                continuation.resumeWithException(task.exception ?: Exception("Get all orders failed"))
+                            }
+                        }
+                }
+            }
         }
 
-    /** Đơn hàng theo trạng thái cụ thể (Admin) */
+    /** Đơn hàng lọc theo trạng thái cụ thể (Staff / Admin) */
     suspend fun getOrdersByStatus(status: OrderStatus): Result<List<Order>> =
         withContext(Dispatchers.IO) {
-            runCatching { firestoreSource.getOrdersByStatus(status) }
+            runCatching {
+                getAllOrders().getOrThrow().filter { it.status == status }
+            }
         }
 
-    /**
-     * Realtime Flow các đơn đang xử lý – dùng cho Staff Dashboard.
-     * Emit mỗi khi Firestore có thay đổi.
-     */
-    fun observeActiveOrders(): Flow<List<Order>> =
-        firestoreSource.getActiveOrdersFlow()
+    /** Lắng nghe toàn bộ các đơn hàng chưa hoàn thành (Realtime Flow cho Dashboard Nhân viên) */
+    fun observeActiveOrders(): Flow<List<Order>> = callbackFlow {
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val listener = db.collection("orders")
+            .whereIn("status", listOf(OrderStatus.PENDING.name, OrderStatus.CONFIRMED.name, OrderStatus.BREWING.name, OrderStatus.READY.name))
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val orders = snapshot?.documents?.mapNotNull { doc ->
+                    doc.data?.let { Order.fromMap(doc.id, it) } // 🟢 ĐÃ FIX: Thêm doc.id đồng bộ
+                }?.sortedByDescending { it.createdAt } ?: emptyList()
+                trySend(orders)
+            }
+        awaitClose { listener.remove() }
+    }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
-     * Sinh ID đơn hàng dạng "NL-XXXX" (4 ký tự hex ngẫu nhiên, viết hoa).
+     * Sinh ID đơn hàng dạng "NL-XXXX" với kiểm tra trùng lặp trên Firestore.
+     * Thử tối đa 10 lần, fallback sang timestamp nếu vẫn trùng.
      */
-    private fun generateOrderId(): String {
-        val suffix = UUID.randomUUID().toString().take(4).uppercase()
-        return "NL-$suffix"
+    private suspend fun generateOrderId(): String {
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val allowedChars = ('A'..'Z') + ('0'..'9')
+
+        repeat(10) {
+            val randomStr = (1..4).map { allowedChars.random() }.joinToString("")
+            val id = "NL-$randomStr"
+            val exists = suspendCancellableCoroutine { cont ->
+                db.collection("orders").document(id).get()
+                    .addOnCompleteListener { task ->
+                        cont.resume(task.result?.exists() == true)
+                    }
+            }
+            if (!exists) return id
+        }
+
+        return "NL-${System.currentTimeMillis() % 1_000_000}"
     }
 }

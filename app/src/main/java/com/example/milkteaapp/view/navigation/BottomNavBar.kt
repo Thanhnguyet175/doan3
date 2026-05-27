@@ -1,26 +1,27 @@
 package com.example.milkteaapp.view.navigation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,6 +42,8 @@ private val MauNauMid  = Color(0xFF795548)
 private val MauTextSub = Color(0xFF7F7571)
 private val MauXam     = Color(0xFF9E9E9E)
 private val MauDo      = Color(0xFFEF4444)
+private val MauVang    = Color(0xFFFBC02D) // Thêm màu Vàng cho Hạng thành viên
+private val MauXanhLa  = Color(0xFF4F7E63) // Thêm màu Xanh cho Điểm thưởng
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TAB ENUM
@@ -151,9 +154,17 @@ fun BottomNavBar(
     }
 }
 
-// ── Trang tài khoản khách hàng (thay thế GiaoDienTaiKhoanTam) ────────────────
+// ── Trang tài khoản khách hàng (Đã cập nhật giao diện chuẩn App) ────────────────
 @Composable
-fun TrangTaiKhoanKhachHang(onLogout: () -> Unit) {
+fun TrangTaiKhoanKhachHang(
+    onLogout: () -> Unit,
+    customerName: String = "Khách hàng",
+    customerEmail: String = "khachhang@email.com",
+    memberTier: String = "Thành viên Vàng",
+    rewardPoints: Int = 1250
+) {
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -164,70 +175,204 @@ fun TrangTaiKhoanKhachHang(onLogout: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MauNauDam)
-                .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 20.dp)
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Text("Tài khoản", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Tài khoản của tôi", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Spacer(modifier = Modifier.size(20.dp))
-
-            // Avatar
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(MauNau),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("KH", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            }
-
-            Spacer(modifier = Modifier.size(12.dp))
-            Text("Khách hàng", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = MauNauDam)
-            Text("khachhang@email.com", fontSize = 13.sp, color = MauTextSub)
-            Spacer(modifier = Modifier.size(24.dp))
-
-            // Menu items
-            ListItem(
-                headlineContent = { Text("Thông tin cá nhân") },
-                leadingContent  = { Icon(Icons.Default.AccountCircle, null, tint = MauNauMid) },
-                trailingContent = { Text("›", color = MauTextSub, fontSize = 18.sp) },
-                colors = ListItemDefaults.colors(containerColor = Color.White),
-                modifier = Modifier.clip(MaterialTheme.shapes.medium).padding(bottom = 2.dp)
-            )
-            ListItem(
-                headlineContent = { Text("Thông báo") },
-                leadingContent  = { Icon(Icons.Default.Notifications, null, tint = MauNauMid) },
-                trailingContent = { Text("›", color = MauTextSub, fontSize = 18.sp) },
-                colors = ListItemDefaults.colors(containerColor = Color.White),
-                modifier = Modifier.clip(MaterialTheme.shapes.medium).padding(bottom = 2.dp)
-            )
-            ListItem(
-                headlineContent = { Text("Đổi mật khẩu") },
-                leadingContent  = { Icon(Icons.Default.Lock, null, tint = MauNauMid) },
-                trailingContent = { Text("›", color = MauTextSub, fontSize = 18.sp) },
-                colors = ListItemDefaults.colors(containerColor = Color.White),
-                modifier = Modifier.clip(MaterialTheme.shapes.medium)
-            )
-
-            Spacer(modifier = Modifier.size(16.dp))
-
-            Button(
-                onClick = onLogout,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFEBEE)),
-                shape  = MaterialTheme.shapes.medium,
+            // ─── THÔNG TIN CÁ NHÂN KÈM HẠNG THÀNH VIÊN ───────────────────────
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.AutoMirrored.Filled.ExitToApp, null, tint = MauDo)
-                Spacer(modifier = Modifier.size(8.dp))
-                Text("Đăng xuất", color = MauDo, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        // Avatar
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(MauNau),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("KH", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(customerName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MauNauDam)
+                            Text(customerEmail, fontSize = 14.sp, color = MauTextSub)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            // Thẻ hạng thành viên
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MauVang.copy(alpha = 0.2f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Rounded.Stars, contentDescription = null, tint = MauVang, modifier = Modifier.size(12.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(memberTier, fontSize = 11.sp, color = MauNauDam, fontWeight = FontWeight.Medium)
+                            }
+                        }
+
+                        IconButton(onClick = { /* TODO: Chuyển trang sửa hồ sơ */ }) {
+                            Icon(Icons.Rounded.Edit, contentDescription = "Chỉnh sửa", tint = MauNau)
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFEFEBE9))
+
+                    // Điểm thưởng
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.LocalActivity, contentDescription = null, tint = MauXanhLa, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Điểm thưởng (NL Points)", fontSize = 14.sp, color = MauNauDam)
+                        }
+                        Text("$rewardPoints Điểm", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MauXanhLa)
+                    }
+                }
+            }
+
+            // ─── DANH MỤC TÀI KHOẢN VÀ BẢO MẬT ──────────────────────────────
+            MenuSection(title = "Tài khoản & Bảo mật") {
+                ProfileMenuItem(
+                    icon = Icons.Rounded.AccountCircle,
+                    title = "Thông tin cá nhân",
+                    subtitle = "Quản lý thông tin hồ sơ",
+                    onClick = { /* TODO */ }
+                )
+                ProfileMenuItem(
+                    icon = Icons.Rounded.LocationOn,
+                    title = "Địa chỉ giao hàng",
+                    onClick = { /* TODO */ }
+                )
+                ProfileMenuItem(
+                    icon = Icons.Rounded.Lock,
+                    title = "Đổi mật khẩu",
+                    onClick = { /* TODO */ }
+                )
+            }
+
+            // ─── CÀI ĐẶT & HỖ TRỢ ───────────────────────────────────────────
+            MenuSection(title = "Cài đặt ứng dụng") {
+                ProfileMenuItem(
+                    icon = Icons.Rounded.Notifications,
+                    title = "Cài đặt thông báo",
+                    onClick = { /* TODO */ }
+                )
+                ProfileMenuItem(
+                    icon = Icons.Rounded.HeadsetMic,
+                    title = "Trung tâm hỗ trợ",
+                    onClick = { /* TODO */ }
+                )
+            }
+
+            // ─── NÚT ĐĂNG XUẤT ──────────────────────────────────────────────
+            Button(
+                onClick = onLogout,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFFEBEE),
+                    contentColor = MauDo
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Đăng xuất", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+    }
+}
+
+// ─── COMPOSABLE TÁI SỬ DỤNG CHO PROFILE ─────────────────────────────────────
+
+@Composable
+private fun MenuSection(title: String, content: @Composable () -> Unit) {
+    Column {
+        Text(
+            text = title,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = MauTextSub,
+            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+        )
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                content()
             }
         }
+    }
+}
+
+@Composable
+private fun ProfileMenuItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MauNauNhat),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = MauNau)
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MauNauDam)
+            if (subtitle != null) {
+                Text(subtitle, fontSize = 12.sp, color = MauTextSub)
+            }
+        }
+
+        Icon(
+            Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+            contentDescription = "Chi tiết",
+            tint = Color.LightGray
+        )
     }
 }
