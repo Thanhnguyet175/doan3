@@ -4,17 +4,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Assignment
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,9 +51,11 @@ private enum class StaffSection { ORDERS, PROFILE }
 @Composable
 fun StaffOrderManagementScreen(
     onBack: () -> Unit,
-    viewModel: AdminOrderViewModel = hiltViewModel()
+    viewModel: AdminOrderViewModel = hiltViewModel(),
+    authViewModel: com.example.milkteaapp.viewmodel.auth.AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val authState by authViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -84,20 +87,30 @@ fun StaffOrderManagementScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MauNauDam)
-                        .padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 20.dp)
+                        .padding(start = 20.dp, end = 20.dp, top = 40.dp, bottom = 20.dp)
                 ) {
                     Column {
                         Box(
-                            modifier = Modifier
-                                .size(52.dp)
-                                .clip(CircleShape)
-                                .background(MauNauMid),
+                            modifier = Modifier.size(52.dp).clip(CircleShape).background(MauNauMid),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("NV", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            val tenNV = authState.user?.fullName ?: "NV"
+                            Text(
+                                text = tenNV.take(2).uppercase(),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        Text("Nhân viên", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+
+                        // 🟢 HIỂN THỊ TÊN THẬT TỪ FIREBASE
+                        Text(
+                            text = authState.user?.fullName ?: "Nhân viên",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                         Text("NL Tea – Chi nhánh chính", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                     }
                 }
@@ -155,22 +168,25 @@ fun StaffOrderManagementScreen(
                 HorizontalDivider(color = MauNauKem.copy(alpha = 0.5f))
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // ── Đăng xuất ─────────────────────────────────────────────────
-                NavigationDrawerItem(
-                    label = { Text("Đăng xuất", fontWeight = FontWeight.Bold) },
-                    selected = false,
-                    icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = MauDo) },
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        onBack()
-                    },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color(0xFFFFEBEE),
-                        unselectedTextColor = MauDo,
-                        unselectedIconColor = MauDo
-                    ),
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
+                // ── Đăng xuất (Đã fix lỗi thư viện) ──────────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 24.dp)
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(Color(0xFFFFEBEE))
+                        .clickable {
+                            scope.launch { drawerState.close() }
+                            onBack()
+                        }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = MauDo)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Đăng xuất", fontWeight = FontWeight.Bold, color = MauDo)
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -179,11 +195,12 @@ fun StaffOrderManagementScreen(
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                // ── TopBar chung ─────────────────────────────────────────────
+                // ── TopBar chung (Đã fix lỗi bị Pin che mất) ─────────────────
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MauNauDam)
+                        .statusBarsPadding() // 🟢 Đẩy chữ xuống khỏi thanh trạng thái
                         .padding(horizontal = 4.dp, vertical = 4.dp)
                 ) {
                     Row(
@@ -220,9 +237,12 @@ fun StaffOrderManagementScreen(
                     uiState = uiState,
                     viewModel = viewModel
                 )
-                StaffSection.PROFILE -> NoiDungHoSo(padding = padding, onLogout = {
-                    onBack()
-                })
+                StaffSection.PROFILE -> NoiDungHoSo(
+                    padding = padding,
+                    onLogout = { onBack() },
+                    tenNV = authState.user?.fullName ?: "Nhân viên",
+                    emailNV = authState.user?.email ?: "chưa có email"
+                )
             }
         }
     }
@@ -240,7 +260,7 @@ fun StaffOrderManagementScreen(
     }
 }
 
-// ── Nội dung tab Đơn hàng ────────────────────────────────────────────────────
+// ── Nội dung tab Đơn hàng (ĐÃ FIX: Lướt ngang & Đổi Tên Tab) ────────────────
 @Composable
 private fun NoiDungDonHang(
     padding: PaddingValues,
@@ -253,20 +273,42 @@ private fun NoiDungDonHang(
             .background(MauNauNhat)
             .padding(padding)
     ) {
-        // ── Tab row ──────────────────────────────────────────────────────────
-        Row(
+        // ── Tab row dùng LazyRow để cuộn ngang ──────────────────────────────
+        LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .background(Color.White),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            TabDonHang.entries.forEach { tab ->
+            // Sắp xếp thứ tự: Tất cả -> Chờ xác nhận -> Đang xử lý -> Hoàn thành -> Đã hủy
+            val danhSachTab = TabDonHang.entries.sortedBy { tab ->
+                when (tab.name) {
+                    "TAT_CA" -> 0
+                    "CHO_XAC_NHAN", "DON_MOI", "PENDING" -> 1
+                    "DANG_XU_LY", "PROCESSING" -> 2
+                    "DA_GIAO", "HOAN_THANH", "COMPLETED" -> 3
+                    "DA_HUY", "CANCELLED", "HUY" -> 4
+                    else -> 5
+                }
+            }
+
+            items(danhSachTab) { tab ->
+                // Đổi tên nhãn hiển thị cho khớp với ý muốn
+                val nhanHienThi = when (tab.name) {
+                    "TAT_CA" -> "Tất cả"
+                    "CHO_XAC_NHAN", "DON_MOI", "PENDING" -> "Chờ xác nhận"
+                    "DANG_XU_LY", "PROCESSING" -> "Đang xử lý"
+                    "DA_GIAO", "HOAN_THANH", "COMPLETED" -> "Hoàn thành"
+                    "DA_HUY", "CANCELLED", "HUY" -> "Đã hủy"
+                    else -> tab.nhanHien
+                }
+
                 NutTab(
-                    nhan     = tab.nhanHien,
+                    nhan     = nhanHienThi,
                     dangChon = uiState.tabDangChon == tab,
-                    onClick  = { viewModel.chonTab(tab) },
-                    modifier = Modifier.weight(1f)
+                    onClick  = { viewModel.chonTab(tab) }
+                    // 🟢 Bỏ Modifier.weight(1f) để các tab co giãn và cuộn được
                 )
             }
         }
@@ -311,9 +353,14 @@ private fun NoiDungDonHang(
     }
 }
 
-// ── Nội dung tab Hồ sơ ───────────────────────────────────────────────────────
+// ── Nội dung tab Hồ sơ (Đã sửa hiển thị tên & email động) ────────────────────
 @Composable
-private fun NoiDungHoSo(padding: PaddingValues, onLogout: () -> Unit) {
+private fun NoiDungHoSo(
+    padding: PaddingValues,
+    onLogout: () -> Unit,
+    tenNV: String,
+    emailNV: String
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -323,21 +370,32 @@ private fun NoiDungHoSo(padding: PaddingValues, onLogout: () -> Unit) {
     ) {
         Spacer(modifier = Modifier.height(28.dp))
 
-        // Avatar lớn
         Box(
-            modifier = Modifier
-                .size(84.dp)
-                .clip(CircleShape)
-                .background(MauNau),
+            modifier = Modifier.size(84.dp).clip(CircleShape).background(MauNau),
             contentAlignment = Alignment.Center
         ) {
-            Text("NV", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = tenNV.take(2).uppercase(),
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 30.sp
+            )
         }
-
         Spacer(modifier = Modifier.height(12.dp))
-        Text("Nhân viên", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = MauNauDam)
-        Text("Pha chế – NL Tea", fontSize = 13.sp, color = MauTextSub, modifier = Modifier.padding(top = 2.dp))
-        Text("nhanvien@nlteashop.vn", fontSize = 13.sp, color = MauTextSub)
+
+        // 🟢 Hiển thị tên
+        Text(
+            text = tenNV,
+            color = MauNauDam,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.ExtraBold
+        )
+        // 🟢 Hiển thị email
+        Text(
+            text = emailNV,
+            fontSize = 13.sp,
+            color = MauTextSub
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -482,7 +540,7 @@ private fun TheDonHangStaffMoi(
                         onDismissRequest = { hienDropdown = false }
                     ) {
                         OrderStatus.entries
-                            .filter { it != don.status }
+                            .filter { it != don.status && it != OrderStatus.DELAYED }
                             .forEach { trangThai ->
                                 DropdownMenuItem(
                                     text = {
@@ -535,8 +593,8 @@ private fun DialogStaffChiTietDon(
                             "${item.size.label} | Đường ${item.sugarLevel.label} | ${item.iceLevel.label}",
                             fontSize = 12.sp, color = MauTextSub
                         )
-                        if (item.selectedToppings.isNotEmpty()) { // 🟢 ĐÃ FIX: Đổi toppings thành selectedToppings
-                            Text(text = "+ ${item.selectedToppings.joinToString { it.name }}", fontSize = 12.sp, color = MauTextSub) // 🟢 ĐÃ FIX: Ở đây cũng vậy
+                        if (item.selectedToppings.isNotEmpty()) {
+                            Text(text = "+ ${item.selectedToppings.joinToString { it.name }}", fontSize = 12.sp, color = MauTextSub)
                         }
                     }
                 }

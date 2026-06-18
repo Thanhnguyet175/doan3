@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.litert.support.api)
     implementation(libs.play.services.analytics.impl)
     implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.firebase.crashlytics.buildtools)
     ksp(libs.hilt.compiler)
 
     // Mạng & Tiện ích khác

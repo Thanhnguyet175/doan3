@@ -109,8 +109,6 @@ fun StaffDashboardScreen(
                             don             = don,
                             dangCapNhat     = uiState.updatingOrderId == don.id,
                             onBuocTiepTheo  = { viewModel.processNextStep(don.id) },
-                            onTre           = { viewModel.markDelayed(don.id) },
-                            onTiepTuc       = { viewModel.resumeDelayed(don.id) },
                             onNhanDon       = { viewModel.assignSelf(don.id) },
                             onBamVao        = { viewModel.selectOrder(don) }
                         )
@@ -136,8 +134,6 @@ private fun TheDonHangStaff(
     don: Order,
     dangCapNhat: Boolean,
     onBuocTiepTheo: () -> Unit,
-    onTre: () -> Unit,
-    onTiepTuc: () -> Unit,
     onNhanDon: () -> Unit,
     onBamVao: () -> Unit
 ) {
@@ -222,46 +218,24 @@ private fun TheDonHangStaff(
                             ) { Text("Xác nhận", color = Color.White, fontSize = 13.sp) }
                         }
 
-                        // Đã xác nhận: nút Bắt đầu pha + Đánh dấu trễ
+                        // Đã xác nhận: Chỉ còn nút Bắt đầu pha
                         OrderStatus.CONFIRMED -> {
-                            OutlinedButton(
-                                onClick = onTre,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp)
-                            ) { Text("Bị trễ", color = MauCam, fontSize = 13.sp) }
-
                             Button(
                                 onClick = onBuocTiepTheo,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = MauNau)
                             ) { Text("Bắt đầu pha", color = Color.White, fontSize = 13.sp) }
                         }
 
-                        // Đang pha: nút Trễ + Hoàn thành pha
+                        // Đang pha: Chỉ còn nút Sẵn sàng
                         OrderStatus.BREWING -> {
-                            OutlinedButton(
-                                onClick = onTre,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp)
-                            ) { Text("Bị trễ", color = MauCam, fontSize = 13.sp) }
-
                             Button(
                                 onClick = onBuocTiepTheo,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = MauXanh)
                             ) { Text("Sẵn sàng", color = Color.White, fontSize = 13.sp) }
-                        }
-
-                        // Bị trễ: nút Tiếp tục xử lý
-                        OrderStatus.DELAYED -> {
-                            Button(
-                                onClick = onTiepTuc,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MauCam)
-                            ) { Text("Tiếp tục xử lý", color = Color.White, fontSize = 13.sp) }
                         }
 
                         // Sẵn sàng giao: nút Hoàn thành đơn
@@ -274,7 +248,7 @@ private fun TheDonHangStaff(
                             ) { Text("Hoàn thành đơn", color = Color.White, fontSize = 13.sp) }
                         }
 
-                        else -> { /* COMPLETED / CANCELLED → không hiện nút */ }
+                        else -> { /* COMPLETED / CANCELLED / DELAYED → không hiện nút */ }
                     }
                 }
             }
@@ -305,9 +279,9 @@ private fun DialogChiTietDonStaff(don: Order, onDong: () -> Unit) {
                             fontSize = 12.sp,
                             color = Color.Gray
                         )
-                        if (item.selectedToppings.isNotEmpty()) { // 🟢 ĐÃ FIX: Đổi toppings thành selectedToppings
+                        if (item.selectedToppings.isNotEmpty()) {
                             Text(
-                                text = "Topping: ${item.selectedToppings.joinToString { it.name }}", // 🟢 ĐÃ FIX: Tương tự ở đây
+                                text = "Topping: ${item.selectedToppings.joinToString { it.name }}",
                                 fontSize = 12.sp,
                                 color = Color(0xFF795548)
                             )

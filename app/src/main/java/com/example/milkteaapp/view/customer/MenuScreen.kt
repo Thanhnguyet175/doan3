@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack // 🟢 Đã thêm icon Quay lại
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,11 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage // 🟢 Thêm import Coil để load ảnh thật từ Firebase
+import coil.compose.AsyncImage
 import com.example.milkteaapp.model.data.Product
 import com.example.milkteaapp.viewmodel.customer.MenuViewModel
 
@@ -33,6 +35,7 @@ private val MauNauDam  = Color(0xFF231F20)
 @Composable
 fun MenuScreen(
     onNavigateToProductDetail: (String) -> Unit,
+    onBack: () -> Unit, // 🟢 THÊM YÊU CẦU TRUYỀN HÀM QUAY LẠI VÀO ĐÂY
     viewModel: MenuViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -42,12 +45,24 @@ fun MenuScreen(
             .fillMaxSize()
             .background(MauNauNhat)
     ) {
-        Box(
+        // ─── HEADER THỰC ĐƠN MÀU NÂU (GIỐNG 100% LỊCH SỬ ĐƠN HÀNG) ───
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, top = 20.dp, end = 16.dp, bottom = 10.dp)
+                .background(Color(0xFF3E2723)) // Đúng mã màu MauNauDam bên Lịch sử đơn hàng
+                .padding(horizontal = 8.dp, vertical = 12.dp), // 🟢 Trả lề trái về 8.dp vì đã có nút
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Thực đơn", fontSize = 24.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Black, color = MauNauDam)
+            // 🟢 THÊM NÚT QUAY LẠI VÀO ĐÂY
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
+            }
+            Text(
+                text = "Thực đơn",
+                fontSize = 20.sp, // Bằng đúng size chữ bên Lịch sử
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
         }
 
         OutlinedTextField(
@@ -58,7 +73,7 @@ fun MenuScreen(
             trailingIcon = {
                 if (uiState.searchQuery.isNotBlank()) {
                     TextButton(onClick = { viewModel.clearSearch() }) {
-                        Text("✕", color = MauNau, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 16.sp)
+                        Text("✕", color = MauNau, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
             },
@@ -87,7 +102,6 @@ fun MenuScreen(
                     onClick    = { viewModel.selectCategory(null) }
                 )
             }
-            // Chỉ hiện các danh mục được cấu hình cho phép hiển thị
             items(uiState.categories.filter { it.isVisible }) { danhMuc ->
                 TabDanhMuc(
                     ten      = danhMuc.name,
@@ -103,10 +117,9 @@ fun MenuScreen(
             }
         } else if (uiState.filteredProducts.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Không tìm thấy món nào thích hợp 😅", color = Color.Gray, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                Text("Không tìm thấy món nào thích hợp 😅", color = Color.Gray, fontWeight = FontWeight.Medium)
             }
         } else {
-            // 🟢 Đã sửa lỗi ép kiểu: Sử dụng đúng hàm items dành riêng cho LazyVerticalGrid
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 90.dp),
@@ -138,7 +151,7 @@ private fun TabDanhMuc(ten: String, dangChon: Boolean, onClick: () -> Unit) {
             text  = ten,
             color = if (dangChon) Color.White else MauNauDam,
             fontSize = 13.sp,
-            fontWeight = if (dangChon) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.SemiBold
+            fontWeight = if (dangChon) FontWeight.Bold else FontWeight.SemiBold
         )
     }
 }
@@ -166,7 +179,6 @@ fun ProductGridCard(
                     .background(Color(0xFFEFEBE9)),
                 contentAlignment = Alignment.Center
             ) {
-                // 🟢 Hiển thị ảnh sản phẩm thật từ Firebase Storage
                 if (!sanPham.imageUrl.isNullOrBlank()) {
                     AsyncImage(
                         model = sanPham.imageUrl,
@@ -183,7 +195,7 @@ fun ProductGridCard(
 
             Text(
                 text = sanPham.name,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = MauNauDam,
                 maxLines = 1
@@ -193,7 +205,7 @@ fun ProductGridCard(
 
             Text(
                 text = String.format("%,dđ", sanPham.basePrice),
-                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
                 color = MauNau
             )

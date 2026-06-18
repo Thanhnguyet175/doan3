@@ -31,8 +31,10 @@ data class AdminOrderUiState(
 // 3 tab hiển thị trên màn hình Admin quản lý đơn
 enum class TabDonHang(val nhanHien: String) {
     TAT_CA("Tất cả"),
+    CHO_XAC_NHAN("Chờ xác nhận"),
     DANG_XU_LY("Đang xử lý"),
-    HOAN_THANH("Hoàn thành")
+    HOAN_THANH("Hoàn thành"), // Tùy code cũ má đang để DA_GIAO hay HOAN_THANH
+    DA_HUY("Đã huỷ")
 }
 
 // ─────────────────────────────────────────────────────────
@@ -134,10 +136,14 @@ class AdminOrderViewModel @Inject constructor(
         return when (tab) {
             TabDonHang.TAT_CA -> danhSach
 
-            // Đang xử lý = các trạng thái chưa kết thúc
+            // Lọc riêng đơn mới chờ xác nhận
+            TabDonHang.CHO_XAC_NHAN -> danhSach.filter { don ->
+                don.status == OrderStatus.PENDING
+            }
+
+            // Các đơn đang trong quá trình pha chế, giao hàng
             TabDonHang.DANG_XU_LY -> danhSach.filter { don ->
                 don.status in listOf(
-                    OrderStatus.PENDING,
                     OrderStatus.CONFIRMED,
                     OrderStatus.BREWING,
                     OrderStatus.READY,
@@ -145,9 +151,14 @@ class AdminOrderViewModel @Inject constructor(
                 )
             }
 
-            // Hoàn thành = xong hoặc đã huỷ
+            // Đơn đã hoàn thành (Lưu ý: Nếu enum của bạn tên là HOAN_THANH thì sửa chữ DA_GIAO lại nha)
             TabDonHang.HOAN_THANH -> danhSach.filter { don ->
-                don.status in listOf(OrderStatus.COMPLETED, OrderStatus.CANCELLED)
+                don.status == OrderStatus.COMPLETED
+            }
+
+            // Đơn đã huỷ
+            TabDonHang.DA_HUY -> danhSach.filter { don ->
+                don.status == OrderStatus.CANCELLED
             }
         }
     }

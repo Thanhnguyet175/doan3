@@ -36,10 +36,8 @@ fun CartScreen(
     onDatHangThanhCong: () -> Unit,
     viewModel: CartViewModel
 ) {
-    // Lấy State thực tế từ ViewModel quản lý giỏ hàng
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Xử lý chuyển trang sau khi đặt hàng thành công
     LaunchedEffect(uiState.orderPlaced) {
         if (uiState.orderPlaced) {
             onDatHangThanhCong()
@@ -60,6 +58,7 @@ fun CartScreen(
                 .padding(horizontal = 8.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // 🟢 ĐÃ FIX: Gắn onClick = onBack để nút Trở Về hoạt động
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
             }
@@ -72,9 +71,8 @@ fun CartScreen(
             }
         }
 
-        // ─── THÂN MÀN HÌNH (Hiển thị danh sách hoặc Báo trống) ───────────────
+        // ─── THÂN MÀN HÌNH ───────────────
         if (uiState.items.isEmpty()) {
-            // Khi giỏ hàng thực sự chưa có món nào
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("🛒", fontSize = 48.sp)
@@ -83,7 +81,6 @@ fun CartScreen(
                 }
             }
         } else {
-            // Khi đã thêm sản phẩm thành công vào giỏ hàng
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(16.dp),
@@ -98,7 +95,6 @@ fun CartScreen(
                     )
                 }
 
-                // Phần nhập ghi chú đơn hàng của người dùng
                 item {
                     OutlinedTextField(
                         value = uiState.orderNote,
@@ -111,7 +107,6 @@ fun CartScreen(
                     )
                 }
 
-                // Phần lựa chọn hình thức thanh toán
                 item {
                     PhanThanhToan(
                         phuongThucHienTai = uiState.paymentMethod,
@@ -188,9 +183,8 @@ private fun TheCartItem(
     onGiamSoLuong: () -> Unit,
     onXoa: () -> Unit
 ) {
-    // Tính tổng tiền cho item này dựa trên giá sản phẩm thực tế
-    // Lưu ý: Nếu trong class CartItem của bạn biến chứa giá tên là 'unitPrice' hay 'basePrice' thì hãy đổi 'price' thành tên tương ứng nhé
-    val tongTienTungMon = item.price * item.quantity
+    // 🟢 ĐÃ FIX: Lấy đúng thuộc tính `unitPrice` từ data class CartItem
+    val tongTienTungMon = item.unitPrice * item.quantity
 
     Card(
         shape = RoundedCornerShape(12.dp),
@@ -203,7 +197,6 @@ private fun TheCartItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Hiển thị hình ảnh từ thuộc tính imageUrl thực tế của CartItem
             Box(
                 modifier = Modifier
                     .size(56.dp)
@@ -211,8 +204,9 @@ private fun TheCartItem(
                     .background(Color(0xFFEFEBE9)),
                 contentAlignment = Alignment.Center
             ) {
+                // 🟢 ĐÃ FIX: Lấy đúng thuộc tính `productImageUrl` thay vì imageUrl trống
                 AsyncImage(
-                    model = item.imageUrl,
+                    model = item.productImageUrl,
                     contentDescription = item.productName,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
@@ -224,11 +218,15 @@ private fun TheCartItem(
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(item.productName, fontWeight = FontWeight.Bold, color = MauNauDam, fontSize = 14.sp)
 
+                // 🟢 ĐÃ FIX: Hiển thị optionSummary (Size, Đường, Đá) để khách biết mình đang order cái gì
+                Text(item.optionSummary, fontSize = 11.sp, color = Color.Gray)
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // 🟢 ĐÃ FIX: Hiển thị giá
                     Text("${"%,d".format(tongTienTungMon)}đ", fontWeight = FontWeight.Bold, color = MauNau)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = onGiamSoLuong, contentPadding = PaddingValues(4.dp)) {

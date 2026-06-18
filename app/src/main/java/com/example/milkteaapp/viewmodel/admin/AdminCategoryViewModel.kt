@@ -88,10 +88,11 @@ class AdminCategoryViewModel @Inject constructor(
                 val snapshot = db.collection("products")
                     .whereEqualTo("categoryId", categoryId)
                     .get().await()
+
                 val list = snapshot.documents.mapNotNull { doc ->
-                    // 🟢 ĐÃ FIX: Dùng toObject của Firebase tự động ép kiểu cực nhàn thay vì gọi fromMap
                     doc.toObject(Product::class.java)?.copy(id = doc.id)
                 }
+
                 _uiState.update {
                     it.copy(
                         isLoadingProducts = it.isLoadingProducts + (categoryId to false),
@@ -109,13 +110,11 @@ class AdminCategoryViewModel @Inject constructor(
         }
     }
 
-    // ── Refresh sản phẩm khi đã mở (sau khi thêm/sửa/xóa sản phẩm) ──────────
     fun laiTaiSanPham(categoryId: String) {
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     isLoadingProducts = it.isLoadingProducts + (categoryId to true),
-                    // Xóa cache cũ để force reload
                     sanPhamTheoDanhMuc = it.sanPhamTheoDanhMuc - categoryId
                 )
             }

@@ -46,7 +46,6 @@ fun HomeScreen(
     onNavigateToCart: () -> Unit,
     onNavigateToProductDetail: (String) -> Unit
 ) {
-    var searchQuery by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
 
     // Bảng màu chủ đạo giữ nguyên theo UI gốc
@@ -66,7 +65,7 @@ fun HomeScreen(
                 .verticalScroll(scrollState)
                 .padding(bottom = 16.dp)
         ) {
-            // ─── HEADER (Xin chào & Giỏ hàng) ────────────────────────────────
+            // HEADER ( Giỏ hàng)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,14 +90,14 @@ fun HomeScreen(
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                text = "Xin chào, ${customerName.ifBlank { "Khách hàng" }} 👋",
+                                text = "Xin chào, ${customerName.ifBlank { "Khách hàng" }} ",
                                 color = Color.White.copy(alpha = 0.85f),
                                 fontSize = 14.sp,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
                         }
 
-                        // Icon Giỏ hàng
+                        // icon cho giỏ hàng
                         IconButton(
                             onClick = onNavigateToCart,
                             modifier = Modifier
@@ -154,27 +153,28 @@ fun HomeScreen(
                 }
             }
 
-            // ─── THANH TÌM KIẾM ──────────────────────────────────────────────────
+            //  THANH TÌM KIẾM
             OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+                value = "",
+                onValueChange = { },
+                enabled = false, // Tắt tính năng gõ chữ
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .clickable { onNavigateToMenu(null) }, // Click vào là sang thẳng tab Menu
                 placeholder = { Text("Tìm món uống bạn thích...", color = Color.Gray) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MauNauDam) },
                 shape = RoundedCornerShape(16.dp),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedIndicatorColor = MauNauDam,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = MauNauDam
+                    disabledContainerColor = Color.White,
+                    disabledIndicatorColor = Color.Transparent,
+                    disabledPlaceholderColor = Color.Gray,
+                    disabledLeadingIconColor = MauNauDam
                 ),
                 singleLine = true
             )
 
-            // ─── DANH MỤC (Lấy trực tiếp từ Admin) ─────────────────────────────────
+            // ─── DANH MỤC  ─────────────────────────────────
             Text(
                 text = "Danh mục",
                 fontSize = 18.sp,
@@ -328,15 +328,8 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.width(16.dp))
 
-                        // Thông tin sản phẩm
+                        // ThôngInfo sản phẩm
                         Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(text = "4.9", fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = "• Bán chạy", fontSize = 11.sp, color = MauXanhLa, fontWeight = FontWeight.Bold)
-                            }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = product.name,

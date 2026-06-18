@@ -122,6 +122,7 @@ fun ProductDetailScreen(
                         Spacer(Modifier.height(4.dp))
                         Text(sanPham.description, fontSize = 13.sp, color = Color.Gray, lineHeight = 18.sp)
                     }
+                    // Giá tiền tự động nhảy theo size khách chọn
                     Text(
                         text = "${"%,d".format(uiState.currentUnitPrice)}đ",
                         fontSize = 18.sp,
@@ -133,10 +134,12 @@ fun ProductDetailScreen(
 
                 HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
 
-                // 1. KÍCH CỠ LY
+                // 🟢 ĐÃ SỬA: Luôn hiển thị Size M và Size L bất chấp Firebase có giá hay không
+                val dsSize = listOf(DrinkSize.MEDIUM, DrinkSize.LARGE)
+
                 NhomLuaChon(tieuDe = "Kích cỡ ly") {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        sanPham.sizePrices.keys.forEach { size ->
+                        dsSize.forEach { size ->
                             NutLuaChon(
                                 nhan = size.label,
                                 dangChon = uiState.selectedSize == size,

@@ -43,6 +43,7 @@ import com.example.milkteaapp.model.data.Product
 import com.example.milkteaapp.viewmodel.admin.AdminProductViewModel
 
 import com.example.milkteaapp.model.data.Category
+import com.example.milkteaapp.model.data.DrinkSize // 🟢 ĐÃ THÊM: Import thư viện DrinkSize
 
 // ── Bảng màu (đồng bộ thiết kế) ──────────────────────────────────────────────
 private val Cream      = Color(0xFFF5F0EB)   // nền tổng thể
@@ -83,7 +84,6 @@ fun AdminProductScreen(
                 .background(Cream)
                 .padding(padding)
         ) {
-            // Đẩy Tea Collection lên sát trên, tăng nhẹ padding top để không bị quá dính
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                 Text(
                     "Tea Collection",
@@ -165,8 +165,6 @@ fun AdminProductScreen(
                 sanPhamGoc       = uiState.sanPhamDangSua,
                 selectedImageUri = uiState.selectedImageUri,
                 isUploading      = uiState.isUploadingImage,
-                // LƯU Ý: Đảm bảo uiState.danhSachDanhMuc gốc của bạn chứa List<Category>
-                // Nếu đang là List<String>, hãy chỉnh trong ViewModel cấp List<Category> xuống nhé
                 danhSachDanhMucObj = uiState.danhSachDanhMuc ?: emptyList(),
                 onChonAnh        = { uri -> viewModel.chonAnh(uri) },
                 onLuu            = { viewModel.luuSanPham(it) },
@@ -228,7 +226,7 @@ private fun SanPhamCard(
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        "ID: ${sanPham.categoryId.take(8)}", // Hiển thị 8 ký tự đầu của ID danh mục
+                        "ID: ${sanPham.categoryId.take(8)}",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -254,6 +252,7 @@ private fun SanPhamCard(
                         color = BrownDark,
                         modifier = Modifier.weight(1f)
                     )
+                    // Hiển thị basePrice (mặc định lấy theo Size M) cho thẻ sản phẩm
                     Text(
                         "${"${sanPham.basePrice / 1000}".replace(",", ".")}k VND",
                         fontWeight = FontWeight.Bold,
@@ -353,19 +352,31 @@ private fun DialogFormSanPham(
     sanPhamGoc        : Product?,
     selectedImageUri  : Uri?,
     isUploading       : Boolean,
-    danhSachDanhMucObj: List<Category>, // Sửa kiểu dữ liệu nhận vào thành List Object để lấy ID
+    danhSachDanhMucObj: List<Category>,
     onChonAnh         : (Uri?) -> Unit,
     onLuu             : (Product) -> Unit,
     onHuy             : () -> Unit
 ) {
     var ten              by remember { mutableStateOf(sanPhamGoc?.name ?: "") }
     var moTa             by remember { mutableStateOf(sanPhamGoc?.description ?: "") }
-    var gia              by remember { mutableStateOf(sanPhamGoc?.basePrice?.toString() ?: "") }
+
+    // 🟢 ĐÃ FIX: Chẻ đôi thuộc tính Giá và tự động móc dữ liệu cũ lên form (nếu có)
+
+// 🟢 Sửa giaM: Ép kiểu Map tường minh
+    var giaM by remember {
+        val map = sanPhamGoc?.sizePrices ?: emptyMap<DrinkSize, Long>()
+        mutableStateOf(map[DrinkSize.MEDIUM]?.toString() ?: "")
+    }
+
+    var giaL by remember {
+        val map = sanPhamGoc?.sizePrices ?: emptyMap<DrinkSize, Long>()
+        mutableStateOf(map[DrinkSize.LARGE]?.toString() ?: "")
+    }
+
     var danhMucId        by remember { mutableStateOf(sanPhamGoc?.categoryId ?: "") }
     var expandedDropdown by remember { mutableStateOf(false) }
     val isThemMoi         = sanPhamGoc == null || sanPhamGoc.id.isBlank()
 
-    // Tìm tên danh mục tương ứng để hiển thị lên thanh Text ô nhập liệu
     val tenDanhMucHienTai = danhSachDanhMucObj.find { it.id == danhMucId }?.name ?: "Chọn danh mục"
 
     val launcher = rememberLauncherForActivityResult(
@@ -432,14 +443,25 @@ private fun DialogFormSanPham(
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Brown, focusedLabelColor = Brown)
                 )
 
-                OutlinedTextField(
-                    value = gia, onValueChange = { gia = it }, label = { Text("Giá (VNĐ) *") },
-                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Brown, focusedLabelColor = Brown)
-                )
+                // 🟢 ĐÃ FIX: Chẻ đôi ô giá thành 2 cột ngang hàng nhau
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = giaM, onValueChange = { giaM = it }, label = { Text("Giá Size M (VNĐ) *") },
+                        modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Brown, focusedLabelColor = Brown)
+                    )
+                    OutlinedTextField(
+                        value = giaL, onValueChange = { giaL = it }, label = { Text("Giá Size L (VNĐ) *") },
+                        modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Brown, focusedLabelColor = Brown)
+                    )
+                }
 
-                // Ô XỔ XUỐNG - LƯU ID DANH MỤC THAY VÌ LƯU TÊN CHỮ TRƠN
                 ExposedDropdownMenuBox(
                     expanded = expandedDropdown,
                     onExpandedChange = { expandedDropdown = !expandedDropdown },
@@ -468,7 +490,7 @@ private fun DialogFormSanPham(
                                 DropdownMenuItem(
                                     text = { Text(dm.name, color = BrownDark) },
                                     onClick = {
-                                        danhMucId = dm.id // SỬA QUAN TRỌNG: Lưu mã ID của Firestore
+                                        danhMucId = dm.id
                                         expandedDropdown = false
                                     }
                                 )
@@ -481,15 +503,24 @@ private fun DialogFormSanPham(
                     OutlinedButton(onClick = onHuy, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) { Text("Huỷ") }
                     Button(
                         onClick = {
+                            // 🟢 ĐÃ FIX: Nhồi 2 giá mới vào Map để lưu chung một cục
+                            val priceM = giaM.toLongOrNull() ?: 0L
+                            val priceL = giaL.toLongOrNull() ?: 0L
+
                             val sp = (sanPhamGoc ?: Product()).copy(
                                 name        = ten.trim(),
                                 description = moTa.trim(),
-                                basePrice   = gia.toLongOrNull() ?: 0L,
-                                categoryId  = danhMucId.trim() // Trường này giờ chứa mã ID dạng chuỗi gốc ngẫu nhiên
+                                basePrice   = priceM, // Giữ basePrice bằng Size M cho các chỗ hiển thị mặc định
+                                sizePrices = mapOf(
+                                    "MEDIUM" to (giaM.toLongOrNull() ?: 0L),
+                                    "LARGE" to (giaL.toLongOrNull() ?: 0L)
+                                ),
+                                categoryId  = danhMucId.trim()
                             )
                             onLuu(sp)
                         },
-                        enabled = ten.isNotBlank() && gia.isNotBlank() && danhMucId.isNotBlank() && !isUploading,
+                        // Điều kiện mở nút LƯU
+                        enabled = ten.isNotBlank() && danhMucId.isNotBlank() && !isUploading,
                         modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Brown)
                     ) {

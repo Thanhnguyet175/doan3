@@ -48,9 +48,8 @@ data class Product(
     val imageUrl: String? = null,
     val basePrice: Long = 0L,
     val isAvailable: Boolean = true,
-
     val availableSizes: List<DrinkSize> = listOf(DrinkSize.MEDIUM),
-    val sizePrices: Map<DrinkSize, Long> = mapOf(DrinkSize.MEDIUM to 0L),
+    val sizePrices: Map<String, Long> = emptyMap(),
 
     // Tự động gán danh sách để giao diện bốc ra dùng trực tiếp
     val sugarOptions: List<SugarLevel> = SugarLevel.values().toList(),
@@ -66,7 +65,8 @@ data class ProductDto(
     val categoryId: String = "",
     val imageUrl: String? = null,
     val basePrice: Long = 0L,
-    val isAvailable: Boolean = true
+    val isAvailable: Boolean = true,
+    val sizePrices: Map<String, Long> = emptyMap()
 ) {
     fun toDomain(): Product = Product(
         id          = id,
@@ -75,6 +75,7 @@ data class ProductDto(
         categoryId  = categoryId,
         imageUrl    = imageUrl,
         basePrice   = basePrice,
+        sizePrices = this.sizePrices,
         isAvailable = isAvailable
     )
 
@@ -86,6 +87,7 @@ data class ProductDto(
             categoryId  = product.categoryId,
             imageUrl    = product.imageUrl,
             basePrice   = product.basePrice,
+            sizePrices = product.sizePrices,
             isAvailable = product.isAvailable
         )
     }

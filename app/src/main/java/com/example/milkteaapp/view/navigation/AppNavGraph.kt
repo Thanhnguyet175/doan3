@@ -17,6 +17,7 @@ import com.example.milkteaapp.view.admin.AdminUserScreen
 import com.example.milkteaapp.view.auth.LoginScreen
 import com.example.milkteaapp.view.auth.RegisterScreen
 import com.example.milkteaapp.view.customer.CartScreen
+import com.example.milkteaapp.view.customer.EditProfileScreen
 import com.example.milkteaapp.view.customer.ProductDetailScreen
 import com.example.milkteaapp.view.staff.StaffOrderManagementScreen
 import com.example.milkteaapp.viewmodel.auth.AuthDestination
@@ -41,6 +42,7 @@ object Route {
     const val ADMIN_USER      = "admin_user"
     const val ADMIN_STATS     = "admin_stats"
 
+    const val EDIT_PROFILE = "edit_profile"
     fun productDetail(productId: String) = "product_detail/$productId"
 }
 
@@ -90,7 +92,7 @@ fun AppNavGraph(
 
         // ── CUSTOMER ─────────────────────────────────────────────────────────
         composable(Route.CUSTOMER_HOME) {
-            // 🟢 ĐÃ FIX: Gọi trực tiếp hàm CustomerScaffold bên file BottomNavBar.kt mà không bị trùng tên nữa!
+            // Gọi trực tiếp hàm CustomerScaffold bên file BottomNavBar.kt
             CustomerScaffold(navController = navController, cartViewModel = cartViewModel)
         }
 
@@ -105,6 +107,26 @@ fun AppNavGraph(
                 onBack             = { navController.popBackStack() },
                 onDatHangThanhCong = { navController.navigate(Route.CUSTOMER_HOME) { popUpTo(Route.CUSTOMER_HOME) { inclusive = true } } },
                 viewModel          = cartViewModel
+            )
+        }
+
+        // ── EDIT PROFILE (ĐÃ SỬA LỖI ONSAVE) ─────────────────────────────────
+        composable(Route.EDIT_PROFILE) {
+            val authState by authViewModel.uiState.collectAsStateWithLifecycle()
+
+            EditProfileScreen(
+                currentName = authState.user?.fullName ?: "",
+                currentEmail = authState.user?.email ?: "",
+                currentAvatarUrl = null,
+                onBack = { navController.popBackStack() },
+                onSave = { newName, newImageUri, oldPass, newPass ->
+                    // Gọi hàm cập nhật
+                    authViewModel.updateUserProfile(newName, newImageUri, oldPass, newPass)
+
+                    // Hiện thông báo và lùi về trang trước
+                    android.widget.Toast.makeText(navController.context, "Đã lưu toàn bộ thông tin!", android.widget.Toast.LENGTH_SHORT).show()
+                    navController.popBackStack()
+                }
             )
         }
 

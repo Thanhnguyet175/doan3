@@ -35,6 +35,8 @@ import com.example.milkteaapp.model.data.Category
 import com.example.milkteaapp.model.data.Product
 import com.example.milkteaapp.viewmodel.admin.AdminCategoryViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.milkteaapp.model.data.DrinkSize
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -273,9 +275,11 @@ fun ProductMiniRow(sanPham: Product) {
                 Text("·", color = Color.Gray, fontSize = 11.sp)
 
                 val sizes = sanPham.sizePrices.keys
-                    .sortedBy { it.ordinal }
-                    .joinToString("/") { it.label }
-                Text(sizes.ifEmpty { "M" }, fontSize = 11.sp, color = Color.Gray)
+                    .toList()
+                    .sortedBy { (it as DrinkSize).ordinal }
+                    .joinToString(separator = "/") { (it as DrinkSize).label }
+
+                Text(text = if (sizes.isBlank()) "M" else sizes, fontSize = 11.sp, color = Color.Gray)
             }
         }
 
