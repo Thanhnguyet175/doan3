@@ -174,7 +174,7 @@ fun HomeScreen(
                 singleLine = true
             )
 
-            // ─── DANH MỤC  ─────────────────────────────────
+            // DANH MỤC
             Text(
                 text = "Danh mục",
                 fontSize = 18.sp,

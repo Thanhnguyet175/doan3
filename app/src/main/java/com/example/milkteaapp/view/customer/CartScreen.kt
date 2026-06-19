@@ -1,6 +1,9 @@
 package com.example.milkteaapp.view.customer
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,12 +19,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.milkteaapp.R
 import com.example.milkteaapp.model.data.CartItem
 import com.example.milkteaapp.viewmodel.customer.CartViewModel
 
@@ -55,10 +61,11 @@ fun CartScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MauNauDam)
+                // 🟢 ĐÃ FIX: Bắt buộc Header phải né thanh trạng thái (camera, pin) ra
+                .statusBarsPadding()
                 .padding(horizontal = 8.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 🟢 ĐÃ FIX: Gắn onClick = onBack để nút Trở Về hoạt động
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại", tint = Color.White)
             }
@@ -67,7 +74,7 @@ fun CartScreen(
 
             if (uiState.items.isNotEmpty()) {
                 val tongSoLuongMon = uiState.items.sumOf { it.quantity }
-                Text("$tongSoLuongMon món", fontSize = 13.sp, color = Color(0xFFD7CCC8))
+                Text("$tongSoLuongMon món", fontSize = 13.sp, color = Color(0xFFD7CCC8), modifier = Modifier.padding(end = 12.dp))
             }
         }
 
@@ -121,7 +128,8 @@ fun CartScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color.White)
-                        .padding(16.dp),
+                        .padding(16.dp)
+                        .navigationBarsPadding(), // Đẩy lên né cái thanh ngang ảo ở dưới cùng
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -183,7 +191,6 @@ private fun TheCartItem(
     onGiamSoLuong: () -> Unit,
     onXoa: () -> Unit
 ) {
-    // 🟢 ĐÃ FIX: Lấy đúng thuộc tính `unitPrice` từ data class CartItem
     val tongTienTungMon = item.unitPrice * item.quantity
 
     Card(
@@ -204,21 +211,18 @@ private fun TheCartItem(
                     .background(Color(0xFFEFEBE9)),
                 contentAlignment = Alignment.Center
             ) {
-                // 🟢 ĐÃ FIX: Lấy đúng thuộc tính `productImageUrl` thay vì imageUrl trống
                 AsyncImage(
                     model = item.productImageUrl,
                     contentDescription = item.productName,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    placeholder = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Rounded.LocalDrink),
-                    error = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Rounded.LocalDrink)
+                    placeholder = rememberVectorPainter(Icons.Rounded.LocalDrink),
+                    error = rememberVectorPainter(Icons.Rounded.LocalDrink)
                 )
             }
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(item.productName, fontWeight = FontWeight.Bold, color = MauNauDam, fontSize = 14.sp)
-
-                // 🟢 ĐÃ FIX: Hiển thị optionSummary (Size, Đường, Đá) để khách biết mình đang order cái gì
                 Text(item.optionSummary, fontSize = 11.sp, color = Color.Gray)
 
                 Row(
@@ -226,7 +230,6 @@ private fun TheCartItem(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 🟢 ĐÃ FIX: Hiển thị giá
                     Text("${"%,d".format(tongTienTungMon)}đ", fontWeight = FontWeight.Bold, color = MauNau)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = onGiamSoLuong, contentPadding = PaddingValues(4.dp)) {
@@ -252,6 +255,7 @@ private fun PhanThanhToan(phuongThucHienTai: String, onChon: (String) -> Unit) {
     val danhSach = listOf("CASH" to "Tiền mặt", "Chuyển khoản" to "Chuyển khoản")
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Thanh toán", fontWeight = FontWeight.Bold, color = MauNauDam)
+
         danhSach.forEach { (ma, ten) ->
             Row(
                 modifier = Modifier
@@ -268,6 +272,36 @@ private fun PhanThanhToan(phuongThucHienTai: String, onChon: (String) -> Unit) {
                     colors   = RadioButtonDefaults.colors(selectedColor = MauNau)
                 )
                 Text(ten, fontSize = 14.sp, color = MauNauDam)
+            }
+        }
+
+        // Hiện QR quét cực chuẩn
+        AnimatedVisibility(
+            visible = phuongThucHienTai == "Chuyển khoản"
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Vui lòng quét mã QR bên dưới để thanh toán",
+                    fontSize = 13.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                Image(
+                    painter = painterResource(id = R.drawable.qr_bank),
+                    contentDescription = "Mã QR Chuyển Khoản",
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.FillWidth
+                )
+
+                Spacer(Modifier.height(8.dp))
             }
         }
     }
