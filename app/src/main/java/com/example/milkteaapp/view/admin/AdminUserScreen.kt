@@ -14,7 +14,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Visibility
@@ -77,10 +76,11 @@ fun AdminUserScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            // ── FAB: Tạo tài khoản mới ────────────────────────────────────
             FloatingActionButton(
                 onClick = { viewModel.moDialogTaoTaiKhoan() },
+
                 containerColor = MauNau,
+
                 contentColor = Color.White,
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -93,60 +93,55 @@ fun AdminUserScreen(
                     Text("Tạo tài khoản", fontWeight = FontWeight.SemiBold)
                 }
             }
-        }
+        },
+        containerColor = Color.Transparent
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MauNauNhat)
-                .padding(padding)
-        ) {
-            // ── Header ───────────────────────────────────────────────────────
+                .padding(top = 0.dp)        ) {
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MauNauDam)
-                    .padding(horizontal = 8.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
-                }
-                Text(
-                    "Quản lý người dùng",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.weight(1f)
+                OutlinedTextField(
+                    value = uiState.tuKhoaTim,
+                    onValueChange = { viewModel.timKiem(it) },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Tìm theo tên hoặc email…") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null, tint = MauXam)
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MauNau,
+                        unfocusedBorderColor = Color(0xFFDDD6CF),
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
                 )
-                IconButton(onClick = { viewModel.taiDanhSachNguoiDung() }) {
+
+                //nut refresh
+                Box(
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MauNau)
+                        .clickable { viewModel.taiDanhSachNguoiDung() },
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(Icons.Default.Refresh, contentDescription = "Làm mới", tint = Color.White)
                 }
             }
 
-            // ── Ô tìm kiếm ───────────────────────────────────────────────────
-            OutlinedTextField(
-                value = uiState.tuKhoaTim,
-                onValueChange = { viewModel.timKiem(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                placeholder = { Text("Tìm theo tên hoặc email…") },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = MauXam)
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MauNau,
-                    unfocusedBorderColor = Color(0xFFDDD6CF),
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
-                ),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
-            )
-
-            // ── Bộ lọc vai trò ───────────────────────────────────────────────
+            // Bộ lọc vai trò
             LazyRow(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -176,7 +171,7 @@ fun AdminUserScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
 
-            // ── Danh sách / Loading / Rỗng ───────────────────────────────────
+            //  Danh sách / Loading / Rỗng
             when {
                 uiState.isLoading -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -200,7 +195,7 @@ fun AdminUserScreen(
                             start = 16.dp,
                             end = 16.dp,
                             top = 4.dp,
-                            bottom = 88.dp   // padding để FAB không che item cuối
+                            bottom = 88.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -216,7 +211,7 @@ fun AdminUserScreen(
         }
     }
 
-    // ── Dialog chi tiết người dùng ───────────────────────────────────────────
+    // chi tiết người dùng
     uiState.nguoiDungDangXem?.let { nd ->
         DialogChiTietNguoiDung(
             nguoiDung = nd,
@@ -227,7 +222,7 @@ fun AdminUserScreen(
         )
     }
 
-    // ── Dialog tạo tài khoản mới ─────────────────────────────────────────────
+    // Dialog tạo tài khoản mới
     if (uiState.hienDialogTaoTaiKhoan) {
         DialogTaoTaiKhoan(
             dangTai  = uiState.dangTaoTaiKhoan,
@@ -239,7 +234,7 @@ fun AdminUserScreen(
     }
 }
 
-// ── Thẻ người dùng trong danh sách ───────────────────────────────────────────
+//  Thẻ người dùng trong danh sách
 
 @Composable
 private fun TheNguoiDung(nguoiDung: User, onClick: () -> Unit) {
@@ -299,7 +294,7 @@ private fun TheNguoiDung(nguoiDung: User, onClick: () -> Unit) {
                 if (!nguoiDung.isActive) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "🔒 Tài khoản bị khoá",
+                        " Tài khoản bị khoá",
                         fontSize = 11.sp,
                         color = MauDo,
                         fontWeight = FontWeight.Medium
@@ -338,7 +333,7 @@ private fun DialogTaoTaiKhoan(
                     .padding(20.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                // ── Tiêu đề ──────────────────────────────────────────────────
+
                 Text(
                     "➕  Tạo tài khoản mới",
                     fontSize = 18.sp,
@@ -352,7 +347,7 @@ private fun DialogTaoTaiKhoan(
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
                 )
 
-                // ── Chọn vai trò ─────────────────────────────────────────────
+                // Chọn vai trò
                 Text("Vai trò *", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MauNauDam)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

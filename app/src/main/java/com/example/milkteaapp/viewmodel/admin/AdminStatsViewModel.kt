@@ -139,7 +139,7 @@ class AdminStatsViewModel @Inject constructor(
         }
     }
 
-    // Tính top 5 sản phẩm bán chạy nhất theo doanh thu
+    // Tính top 5 sản phẩm bán chạy nhất theo SỐ LƯỢNG BÁN
     private fun tinhTop5SanPham(danhSachDon: List<Order>): List<SanPhamBanChay> {
         // Gom tất cả các dòng sản phẩm trong đơn đã hoàn thành
         val donHoanThanh = danhSachDon.filter { it.status == OrderStatus.COMPLETED }
@@ -167,9 +167,8 @@ class AdminStatsViewModel @Inject constructor(
             }
         }
 
-        // Sắp xếp giảm dần theo doanh thu, lấy top 5
         return nhom.values
-            .sortedByDescending { it.doanhThu }
+            .sortedByDescending { it.soLuongBan }
             .take(5)
     }
 

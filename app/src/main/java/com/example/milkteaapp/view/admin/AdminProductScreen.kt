@@ -76,6 +76,7 @@ fun AdminProductScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
         containerColor = Cream
     ) { padding ->
         Column(
@@ -84,43 +85,22 @@ fun AdminProductScreen(
                 .background(Cream)
                 .padding(padding)
         ) {
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                Text(
-                    "Tea Collection",
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BrownDark,
-                    fontStyle = FontStyle.Italic
-                )
-                Text(
-                    "Curate and manage your artisanal tea blends.\nAdjust availability and pricing for the season.",
-                    fontSize = 12.sp,
-                    color = Color(0xFF8D6E63),
-                    lineHeight = 16.sp
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-
+            // 🟢 ĐÃ FIX: Gom Tiêu đề và Nút bấm lên cùng một hàng, xóa Box rỗng
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
-                    onClick = {},
-                    shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Brown),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BrownLight),
-                    modifier = Modifier.height(38.dp)
-                ) {
-                    Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Filter", fontSize = 13.sp)
-                }
-
-                Spacer(Modifier.weight(1f))
+                Text(
+                    "Bộ sưu tập nước",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BrownDark,
+                    fontStyle = FontStyle.Italic,
+                    modifier = Modifier.weight(1f) // Cho chữ chiếm không gian còn lại
+                )
 
                 Button(
                     onClick = { viewModel.batDauThemMoi() },
@@ -130,11 +110,11 @@ fun AdminProductScreen(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("+ New Product", fontSize = 13.sp)
+                    Text("Sản phẩm mới", fontSize = 13.sp)
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
             if (uiState.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

@@ -37,7 +37,6 @@ import com.example.milkteaapp.viewmodel.admin.AdminCategoryViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.milkteaapp.model.data.DrinkSize
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminCategoryScreen(
@@ -46,7 +45,6 @@ fun AdminCategoryScreen(
 ) {
     val context = LocalContext.current
 
-    // 🟢 ĐÃ FIX: Gọi chính xác qua uiState và hứng đúng tên tiếng Việt của ViewModel
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val categories = uiState.danhSachDanhMuc
     val productsByExpandedCategory = uiState.sanPhamTheoDanhMuc
@@ -58,7 +56,8 @@ fun AdminCategoryScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Quản lý danh mục", fontWeight = FontWeight.Bold, color = Color(0xFF4E342E)) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF5F0EB))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF5F0EB)),
+                        windowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)
             )
         },
         floatingActionButton = {
@@ -95,7 +94,6 @@ fun AdminCategoryScreen(
                             category = category,
                             isExpanded = isExpanded,
                             products = products,
-                            // 🟢 ĐÃ FIX: Gọi đúng tên hàm tiếng Việt trong ViewModel
                             onToggleExpand = { viewModel.toggleDanhMuc(category) },
                             onEditClick = { onNavigateToEditCategory(category.id) },
                             onDeleteClick = { showDeleteDialog = category }
@@ -115,7 +113,6 @@ fun AdminCategoryScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        // 🟢 ĐÃ FIX: Gọi đúng tên hàm xóa danh mục
                         viewModel.xoaDanhMuc(category.id)
                         showDeleteDialog = null
                         Toast.makeText(context, "Đã xoá danh mục", Toast.LENGTH_SHORT).show()
@@ -274,12 +271,15 @@ fun ProductMiniRow(sanPham: Product) {
                 )
                 Text("·", color = Color.Gray, fontSize = 11.sp)
 
-                val sizes = sanPham.sizePrices.keys
-                    .toList()
-                    .sortedBy { (it as DrinkSize).ordinal }
-                    .joinToString(separator = "/") { (it as DrinkSize).label }
+               // Xử lý kích thước sản phẩm
+                val sizes = try {
+                    val keys = sanPham.sizePrices.keys
+                    if (keys.isEmpty()) "M" else keys.joinToString("/")
+                } catch (e: Exception) {
+                    "M"
+                }
 
-                Text(text = if (sizes.isBlank()) "M" else sizes, fontSize = 11.sp, color = Color.Gray)
+                Text(text = sizes, fontSize = 11.sp, color = Color.Gray)
             }
         }
 
