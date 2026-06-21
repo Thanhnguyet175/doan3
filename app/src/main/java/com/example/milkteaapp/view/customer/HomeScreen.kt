@@ -39,8 +39,8 @@ import com.example.milkteaapp.model.data.Product
 @Composable
 fun HomeScreen(
     customerName: String = "Khách hàng",
-    categories: List<Category> = emptyList(),       // Nhận dữ liệu thật từ Admin truyền vào
-    bestSellers: List<Product> = emptyList(),       // Nhận dữ liệu thật đã tính toán theo doanh thu
+    categories: List<Category> = emptyList(),
+    bestSellers: List<Product> = emptyList(),
     soItemGio: Int = 0,
     onNavigateToMenu: (String?) -> Unit,
     onNavigateToCart: () -> Unit,
